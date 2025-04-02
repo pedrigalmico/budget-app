@@ -20,13 +20,15 @@ export const useAppState = () => {
   // Update local state when Firestore data changes
   useEffect(() => {
     if (firestoreData) {
+      console.log('Updating local state from Firestore:', firestoreData);
       setState(firestoreData);
     }
   }, [firestoreData]);
 
   // Save to Firestore when local state changes
   useEffect(() => {
-    if (state !== firestoreData) {
+    if (state && JSON.stringify(state) !== JSON.stringify(firestoreData)) {
+      console.log('Saving state to Firestore:', state);
       updateData(state);
     }
   }, [state, firestoreData, updateData]);
