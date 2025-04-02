@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppState, Expense, Goal, Investment, Settings, Income } from '../types';
 import { useFirestore } from './useFirestore';
 
@@ -16,19 +16,31 @@ export const useAppState = () => {
       customCategories: []
     }
   }));
+  
+  const isInitialMount = useRef(true);
+  const skipNextUpdate = useRef(false);
 
   // Update local state when Firestore data changes
   useEffect(() => {
     if (firestoreData) {
-      console.log('Updating local state from Firestore:', firestoreData);
+      skipNextUpdate.current = true;
       setState(firestoreData);
     }
   }, [firestoreData]);
 
   // Save to Firestore when local state changes
   useEffect(() => {
-    if (state && JSON.stringify(state) !== JSON.stringify(firestoreData)) {
-      console.log('Saving state to Firestore:', state);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (skipNextUpdate.current) {
+      skipNextUpdate.current = false;
+      return;
+    }
+
+    if (firestoreData && JSON.stringify(state) !== JSON.stringify(firestoreData)) {
       updateData(state);
     }
   }, [state, firestoreData, updateData]);

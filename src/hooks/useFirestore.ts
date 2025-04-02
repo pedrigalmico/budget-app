@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,7 @@ export function useFirestore() {
   const { currentUser } = useAuth();
   const [data, setData] = useState<AppState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const lastUpdate = useRef<string>('');
 
   // Load initial data when user logs in
   useEffect(() => {
@@ -23,10 +24,15 @@ export function useFirestore() {
     const unsubscribe = onSnapshot(userDoc, 
       (doc) => {
         if (doc.exists()) {
-          console.log('Loading user data from Firestore:', doc.data());
           const userData = doc.data() as AppState;
-          setData(userData);
-          setError(null);
+          const dataString = JSON.stringify(userData);
+          
+          // Only update if data has actually changed
+          if (dataString !== lastUpdate.current) {
+            console.log('Loading new user data from Firestore');
+            setData(userData);
+            lastUpdate.current = dataString;
+          }
         } else {
           console.log('No existing data found, initializing with default state');
           const defaultState: AppState = {
@@ -93,13 +99,19 @@ export function useFirestore() {
       return;
     }
 
+    const cleanedData = cleanUndefinedValues(newData);
+    const dataString = JSON.stringify(cleanedData);
+    
+    // Only update if data has actually changed
+    if (dataString === lastUpdate.current) {
+      console.log('Data unchanged, skipping Firestore update');
+      return;
+    }
+
     try {
-      // Clean the data before saving
-      const cleanedData = cleanUndefinedValues(newData);
-      console.log('Attempting to save cleaned data to Firestore:', cleanedData);
-      
       const userDoc = doc(db, 'users', currentUser.uid);
       await setDoc(userDoc, cleanedData);
+      lastUpdate.current = dataString;
       console.log('Data successfully saved to Firestore');
       setError(null);
     } catch (error) {
