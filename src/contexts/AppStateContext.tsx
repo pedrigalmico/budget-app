@@ -35,7 +35,6 @@ const initialState: AppState = {
   investments: [],
   settings: {
     monthlyIncome: 0,
-    monthlySpendingLimit: 5000,
     currency: 'SAR',
     darkMode: true,
     customCategories: []

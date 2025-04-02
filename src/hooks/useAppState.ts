@@ -1,19 +1,35 @@
 import { useState, useEffect } from 'react';
 import { AppState, Expense, Goal, Investment, Settings, Income } from '../types';
-import { loadState, saveState } from '../utils/storage';
+import { useFirestore } from './useFirestore';
 
 export const useAppState = () => {
-  const [state, setState] = useState<AppState>(() => {
-    const savedState = loadState();
-    return {
-      ...savedState,
-      incomes: savedState.incomes || []
-    };
-  });
+  const { data: firestoreData, updateData } = useFirestore();
+  const [state, setState] = useState<AppState>(() => ({
+    expenses: [],
+    goals: [],
+    investments: [],
+    incomes: [],
+    settings: {
+      monthlyIncome: 0,
+      currency: 'SAR',
+      darkMode: false,
+      customCategories: []
+    }
+  }));
 
+  // Update local state when Firestore data changes
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    if (firestoreData) {
+      setState(firestoreData);
+    }
+  }, [firestoreData]);
+
+  // Save to Firestore when local state changes
+  useEffect(() => {
+    if (state !== firestoreData) {
+      updateData(state);
+    }
+  }, [state, firestoreData, updateData]);
 
   const calculateCurrentMonthIncome = (incomes: Income[]): number => {
     const now = new Date();
@@ -83,9 +99,10 @@ export const useAppState = () => {
     investments: [],
     incomes: [],
     settings: {
-      monthlySpendingLimit: 0,
+      monthlyIncome: 0,
       currency: 'SAR',
-      darkMode: false
+      darkMode: false,
+      customCategories: []
     }
   };
 

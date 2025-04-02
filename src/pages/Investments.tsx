@@ -173,8 +173,14 @@ export default function Investments() {
                     }`}>
                       Current: {state.settings.currency} {investment.currentValue.toFixed(2)}
                       <br />
-                      {returns?.percentage.toFixed(2)}% ({returns?.amount >= 0 ? '+' : ''}
-                      {state.settings.currency} {returns?.amount.toFixed(2)})
+                      {returns ? (
+                        <>
+                          {returns.percentage.toFixed(2)}% ({returns.amount >= 0 ? '+' : ''}
+                          {state.settings.currency} {returns.amount.toFixed(2)})
+                        </>
+                      ) : (
+                        'No returns data available'
+                      )}
                     </div>
                   )}
                 </div>

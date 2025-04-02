@@ -257,11 +257,14 @@ export default function Home() {
             </div>
             <div>
               <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthExpenses)}</p>
-              <p className="text-sm text-gray-400">
-                {state.settings.monthlySpendingLimit > 0 
-                  ? `${((currentMonthExpenses / state.settings.monthlySpendingLimit) * 100).toFixed(1)}% of limit`
-                  : 'No limit set'}
-              </p>
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-400">Monthly Spending</p>
+                <p className="text-sm text-gray-400">
+                  {state.settings.monthlyIncome > 0 
+                    ? `${((currentMonthExpenses / state.settings.monthlyIncome) * 100).toFixed(1)}% of income`
+                    : 'No income set'}
+                </p>
+              </div>
             </div>
           </div>
         </button>

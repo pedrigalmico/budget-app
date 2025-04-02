@@ -27,7 +27,7 @@ export default function Settings() {
     const formData = new FormData(form);
     
     const settings: SettingsType = {
-      monthlyIncome: state.settings.monthlyIncome,
+      monthlyIncome: parseFloat(formData.get('monthlyIncome') as string),
       currency: formData.get('currency') as string,
       darkMode: formData.get('darkMode') === 'true',
       customCategories: state.settings.customCategories || []
@@ -69,6 +69,22 @@ export default function Settings() {
 
       <div className="card">
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="monthlyIncome" className="block text-sm font-medium mb-1">
+              Monthly Income
+            </label>
+            <input
+              type="number"
+              name="monthlyIncome"
+              id="monthlyIncome"
+              required
+              min="0"
+              step="0.01"
+              className="input"
+              defaultValue={state.settings.monthlyIncome}
+            />
+          </div>
+
           <div>
             <label htmlFor="currency" className="block text-sm font-medium mb-1">
               Currency
