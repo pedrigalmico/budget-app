@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { AppState } from '../types';
@@ -9,8 +9,9 @@ export function useFirestore() {
   const [data, setData] = useState<AppState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const lastUpdate = useRef<string>('');
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Load initial data when user logs in
+  // Load initial data and subscribe to updates
   useEffect(() => {
     if (!currentUser) {
       console.log('No current user, skipping Firestore initialization');
@@ -18,10 +19,11 @@ export function useFirestore() {
     }
 
     const userDoc = doc(db, 'users', currentUser.uid);
-    console.log('Setting up Firestore listener for user:', currentUser.uid);
     
-    // Subscribe to real-time updates
-    const unsubscribe = onSnapshot(userDoc, 
+    // Subscribe to real-time updates with optimized handling
+    const unsubscribe = onSnapshot(
+      userDoc,
+      { includeMetadataChanges: false }, // Only listen for remote changes
       (doc) => {
         if (doc.exists()) {
           const userData = doc.data() as AppState;
@@ -29,12 +31,12 @@ export function useFirestore() {
           
           // Only update if data has actually changed
           if (dataString !== lastUpdate.current) {
-            console.log('Loading new user data from Firestore');
+            console.log('Received new data from Firestore');
             setData(userData);
             lastUpdate.current = dataString;
           }
         } else {
-          console.log('No existing data found, initializing with default state');
+          console.log('Initializing with default state');
           const defaultState: AppState = {
             expenses: [],
             goals: [],
@@ -49,8 +51,8 @@ export function useFirestore() {
           };
           setDoc(userDoc, defaultState)
             .then(() => {
-              console.log('Default state initialized in Firestore');
               setData(defaultState);
+              lastUpdate.current = JSON.stringify(defaultState);
               setError(null);
             })
             .catch((error) => {
@@ -66,12 +68,13 @@ export function useFirestore() {
     );
 
     return () => {
-      console.log('Cleaning up Firestore listener');
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
       unsubscribe();
     };
   }, [currentUser]);
 
-  // Helper function to clean undefined values from an object
   const cleanUndefinedValues = (obj: any): any => {
     if (obj === null || typeof obj !== 'object') {
       return obj;
@@ -108,17 +111,25 @@ export function useFirestore() {
       return;
     }
 
-    try {
-      const userDoc = doc(db, 'users', currentUser.uid);
-      await setDoc(userDoc, cleanedData);
-      lastUpdate.current = dataString;
-      console.log('Data successfully saved to Firestore');
-      setError(null);
-    } catch (error) {
-      console.error('Error saving data to Firestore:', error);
-      setError('Failed to save data');
-      throw error;
+    // Clear any existing timeout
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
+
+    // Debounce the write operation
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const userDoc = doc(db, 'users', currentUser.uid);
+        await setDoc(userDoc, cleanedData);
+        lastUpdate.current = dataString;
+        console.log('Data saved to Firestore');
+        setError(null);
+      } catch (error) {
+        console.error('Error saving data:', error);
+        setError('Failed to save data');
+        throw error;
+      }
+    }, 2000); // Debounce for 2 seconds
   };
 
   return { data, updateData, error };

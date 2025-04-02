@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, Expense, Goal, Investment, Settings, Income } from '../types';
 import { useFirestore } from './useFirestore';
 
@@ -17,33 +17,39 @@ export const useAppState = () => {
     }
   }));
   
-  const isInitialMount = useRef(true);
-  const skipNextUpdate = useRef(false);
+  const pendingUpdates = useRef<NodeJS.Timeout | null>(null);
 
   // Update local state when Firestore data changes
   useEffect(() => {
     if (firestoreData) {
-      skipNextUpdate.current = true;
       setState(firestoreData);
     }
   }, [firestoreData]);
 
-  // Save to Firestore when local state changes
+  // Debounced state update function
+  const updateState = useCallback((newState: AppState) => {
+    // Update local state immediately
+    setState(newState);
+
+    // Clear any pending update
+    if (pendingUpdates.current) {
+      clearTimeout(pendingUpdates.current);
+    }
+
+    // Schedule Firestore update
+    pendingUpdates.current = setTimeout(() => {
+      updateData(newState);
+    }, 2000);
+  }, [updateData]);
+
+  // Cleanup on unmount
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
-    if (skipNextUpdate.current) {
-      skipNextUpdate.current = false;
-      return;
-    }
-
-    if (firestoreData && JSON.stringify(state) !== JSON.stringify(firestoreData)) {
-      updateData(state);
-    }
-  }, [state, firestoreData, updateData]);
+    return () => {
+      if (pendingUpdates.current) {
+        clearTimeout(pendingUpdates.current);
+      }
+    };
+  }, []);
 
   const calculateCurrentMonthIncome = (incomes: Income[]): number => {
     const now = new Date();
@@ -80,31 +86,31 @@ export const useAppState = () => {
   };
 
   const addExpense = (expense: Expense) => {
-    setState(prev => ({
-      ...prev,
-      expenses: [...prev.expenses, expense]
-    }));
+    updateState({
+      ...state,
+      expenses: [...state.expenses, expense]
+    });
   };
 
   const addGoal = (goal: Goal) => {
-    setState(prev => ({
-      ...prev,
-      goals: [...prev.goals, goal]
-    }));
+    updateState({
+      ...state,
+      goals: [...state.goals, goal]
+    });
   };
 
   const addInvestment = (investment: Investment) => {
-    setState(prev => ({
-      ...prev,
-      investments: [...prev.investments, investment]
-    }));
+    updateState({
+      ...state,
+      investments: [...state.investments, investment]
+    });
   };
 
   const updateSettings = (settings: Settings) => {
-    setState(prev => ({
-      ...prev,
+    updateState({
+      ...state,
       settings
-    }));
+    });
   };
 
   const defaultState: AppState = {
@@ -145,46 +151,46 @@ export const useAppState = () => {
   };
 
   const updateGoal = (updatedGoal: Goal) => {
-    setState(prev => ({
-      ...prev,
-      goals: prev.goals.map(goal => 
+    updateState({
+      ...state,
+      goals: state.goals.map(goal => 
         goal.id === updatedGoal.id ? updatedGoal : goal
       )
-    }));
+    });
   };
 
   const updateExpense = (updatedExpense: Expense) => {
-    setState(prev => ({
-      ...prev,
-      expenses: prev.expenses.map(expense => 
+    updateState({
+      ...state,
+      expenses: state.expenses.map(expense => 
         expense.id === updatedExpense.id ? updatedExpense : expense
       )
-    }));
+    });
   };
 
   const updateInvestment = (updatedInvestment: Investment) => {
-    setState(prev => ({
-      ...prev,
-      investments: prev.investments.map(investment => 
+    updateState({
+      ...state,
+      investments: state.investments.map(investment => 
         investment.id === updatedInvestment.id ? updatedInvestment : investment
       )
-    }));
+    });
   };
 
   const addIncome = (income: Income) => {
-    setState(prev => ({
-      ...prev,
-      incomes: [...prev.incomes, income]
-    }));
+    updateState({
+      ...state,
+      incomes: [...state.incomes, income]
+    });
   };
 
   const updateIncome = (updatedIncome: Income) => {
-    setState(prev => ({
-      ...prev,
-      incomes: prev.incomes.map(income => 
+    updateState({
+      ...state,
+      incomes: state.incomes.map(income => 
         income.id === updatedIncome.id ? updatedIncome : income
       )
-    }));
+    });
   };
 
   // Add a helper function for number formatting
