@@ -1,3 +1,5 @@
+import { Category } from '../config/categories';
+
 export interface Expense {
   id: string;
   amount: number;
@@ -32,9 +34,9 @@ export interface Investment {
 
 export interface Settings {
   monthlyIncome: number;
-  monthlySpendingLimit: number;
   currency: string;
   darkMode: boolean;
+  customCategories: Category[];
 }
 
 export interface AppState {

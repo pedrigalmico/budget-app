@@ -3,6 +3,7 @@ import { useAppState } from '../hooks/useAppState';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FaMoneyBillWave, FaChartLine, FaPiggyBank, FaWallet, FaBullseye, FaArrowRight } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 type ViewType = 'month' | 'ytd' | 'year';
 type Category = 'income' | 'expenses' | 'investments' | 'goals';
@@ -30,6 +31,7 @@ export default function Home() {
   const [viewType, setViewType] = useState<ViewType>('ytd');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(['income', 'expenses', 'investments', 'goals']);
+  const { login } = useAuth();
 
   // Generate available years (5 years back from current year)
   const availableYears = useMemo(() => {

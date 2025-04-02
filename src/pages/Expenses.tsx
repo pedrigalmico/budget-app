@@ -2,22 +2,19 @@ import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Expense } from '../types';
 import { FaPlus, FaEdit } from 'react-icons/fa';
-
-const CATEGORIES = [
-  'Food & Dining',
-  'Shopping',
-  'Transportation',
-  'Bills & Utilities',
-  'Entertainment',
-  'Health & Wellness',
-  'Other'
-];
+import { DEFAULT_CATEGORIES } from '../config/categories';
 
 export default function Expenses() {
   const { state, addExpense, updateExpense, formatMoney } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  // Combine default and custom categories
+  const allCategories = [
+    ...DEFAULT_CATEGORIES,
+    ...(state.settings.customCategories || []).map(cat => cat.name)
+  ];
 
   const filteredExpenses = state.expenses.filter(expense => 
     expense.date.startsWith(selectedMonth)
@@ -102,9 +99,9 @@ export default function Expenses() {
                 id="category" 
                 required 
                 className="input mt-1"
-                defaultValue={editingExpense?.category || CATEGORIES[0]}
+                defaultValue={editingExpense?.category || allCategories[0]}
               >
-                {CATEGORIES.map(category => (
+                {allCategories.map(category => (
                   <option key={category} value={category}>
                     {category}
                   </option>
