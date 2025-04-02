@@ -65,6 +65,28 @@ export function useFirestore() {
     };
   }, [currentUser]);
 
+  // Helper function to clean undefined values from an object
+  const cleanUndefinedValues = (obj: any): any => {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(cleanUndefinedValues).filter(item => item !== undefined);
+    }
+
+    const cleaned: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = cleanUndefinedValues(obj[key]);
+        if (value !== undefined) {
+          cleaned[key] = value;
+        }
+      }
+    }
+    return cleaned;
+  };
+
   const updateData = async (newData: AppState) => {
     if (!currentUser) {
       console.log('No current user, skipping Firestore update');
@@ -72,15 +94,18 @@ export function useFirestore() {
     }
 
     try {
-      console.log('Attempting to save data to Firestore:', newData);
+      // Clean the data before saving
+      const cleanedData = cleanUndefinedValues(newData);
+      console.log('Attempting to save cleaned data to Firestore:', cleanedData);
+      
       const userDoc = doc(db, 'users', currentUser.uid);
-      await setDoc(userDoc, newData);
+      await setDoc(userDoc, cleanedData);
       console.log('Data successfully saved to Firestore');
       setError(null);
     } catch (error) {
       console.error('Error saving data to Firestore:', error);
       setError('Failed to save data');
-      throw error; // Re-throw to allow components to handle the error
+      throw error;
     }
   };
 
