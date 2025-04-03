@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-ro
 import { useAppState } from './hooks/useAppState';
 import { FaHome, FaCog, FaDollarSign, FaArrowUp, FaBullseye, FaChartBar, FaChartPie } from 'react-icons/fa';
 import { AuthProvider } from './contexts/AuthContext';
+import { LoadingProvider } from './contexts/LoadingContext';
 import { useFirestore } from './hooks/useFirestore';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './contexts/AuthContext';
@@ -98,7 +99,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <LoadingProvider>
+        <AppContent />
+      </LoadingProvider>
     </AuthProvider>
   );
 }

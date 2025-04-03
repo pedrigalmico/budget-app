@@ -30,6 +30,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [viewType, setViewType] = useState<ViewType>('ytd');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(['income', 'expenses', 'investments', 'goals']);
   const { login } = useAuth();
 
@@ -39,26 +40,33 @@ export default function Home() {
     return Array.from({ length: 6 }, (_, i) => currentYear - 5 + i);
   }, []);
 
+  // Generate month names
+  const monthNames = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => 
+      new Date(2000, i).toLocaleString('default', { month: 'long' })
+    );
+  }, []);
+
   // Calculate current month's totals
   const currentMonthIncome = useMemo(() => {
     return state.incomes
       .filter(income => {
         const date = new Date(income.date);
-        return date.getMonth() === new Date().getMonth() && 
-               date.getFullYear() === new Date().getFullYear();
+        return date.getMonth() === selectedMonth && 
+               date.getFullYear() === selectedYear;
       })
       .reduce((sum, income) => sum + income.amount, 0);
-  }, [state.incomes]);
+  }, [state.incomes, selectedMonth, selectedYear]);
 
   const currentMonthExpenses = useMemo(() => {
     return state.expenses
       .filter(expense => {
         const date = new Date(expense.date);
-        return date.getMonth() === new Date().getMonth() && 
-               date.getFullYear() === new Date().getFullYear();
+        return date.getMonth() === selectedMonth && 
+               date.getFullYear() === selectedYear;
       })
       .reduce((sum, expense) => sum + expense.amount, 0);
-  }, [state.expenses]);
+  }, [state.expenses, selectedMonth, selectedYear]);
 
   const totalInvestments = useMemo(() => {
     return state.investments.reduce((sum, investment) => sum + (investment.currentValue || investment.amount), 0);
@@ -82,12 +90,12 @@ export default function Home() {
     const year = viewType === 'year' ? selectedYear : now.getFullYear();
 
     if (viewType === 'month') {
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const currentMonth = now.toISOString().slice(0, 7);
+      const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+      const monthStr = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
 
       for (let day = 1; day <= daysInMonth; day++) {
         const date = `${day}`;
-        const dayStr = `${currentMonth}-${day.toString().padStart(2, '0')}`;
+        const dayStr = `${monthStr}-${day.toString().padStart(2, '0')}`;
 
         const dayIncome = state.incomes
           .filter(income => income.date.startsWith(dayStr))
@@ -148,7 +156,7 @@ export default function Home() {
     }
 
     return data;
-  }, [state.incomes, state.expenses, state.investments, state.goals, viewType, selectedYear]);
+  }, [state.incomes, state.expenses, state.investments, state.goals, viewType, selectedYear, selectedMonth]);
 
   // Generate insights
   const getInsights = () => {
@@ -158,8 +166,8 @@ export default function Home() {
     const expensesByCategory = state.expenses
       .filter(expense => {
         const date = new Date(expense.date);
-        return date.getMonth() === new Date().getMonth() && 
-               date.getFullYear() === new Date().getFullYear();
+        return date.getMonth() === selectedMonth && 
+               date.getFullYear() === selectedYear;
       })
       .reduce((acc, expense) => {
         acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
@@ -304,14 +312,38 @@ export default function Home() {
       {/* Graph Controls */}
       <div>
         <div className="flex justify-start items-center gap-2 mb-4">
-          <button
-            onClick={() => setViewType('month')}
-            className={`px-3 py-1 rounded-full text-sm ${
-              viewType === 'month' ? 'bg-blue-500' : 'bg-gray-700'
-            }`}
-          >
-            Month
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewType('month')}
+              className={`px-3 py-1 rounded-full text-sm ${
+                viewType === 'month' ? 'bg-blue-500' : 'bg-gray-700'
+              }`}
+            >
+              Month
+            </button>
+            {viewType === 'month' && (
+              <>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="bg-gray-700 text-sm rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {monthNames.map((month, index) => (
+                    <option key={month} value={index}>{month}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-gray-700 text-sm rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
           <button
             onClick={() => setViewType('ytd')}
             className={`px-3 py-1 rounded-full text-sm ${

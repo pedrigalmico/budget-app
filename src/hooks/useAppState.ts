@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, Expense, Goal, Investment, Settings, Income } from '../types';
 import { useFirestore } from './useFirestore';
+import { useLoading } from '../contexts/LoadingContext';
 
 export const useAppState = () => {
   const { data: firestoreData, updateData } = useFirestore();
+  const { setIsLoading } = useLoading();
   const [state, setState] = useState<AppState>(() => ({
     expenses: [],
     goals: [],
@@ -18,6 +20,7 @@ export const useAppState = () => {
   }));
   
   const pendingUpdates = useRef<NodeJS.Timeout | null>(null);
+  const pendingData = useRef<AppState | null>(null);
 
   // Update local state when Firestore data changes
   useEffect(() => {
@@ -30,26 +33,41 @@ export const useAppState = () => {
   const updateState = useCallback((newState: AppState) => {
     // Update local state immediately
     setState(newState);
+    
+    // Store the pending data
+    pendingData.current = newState;
 
     // Clear any pending update
     if (pendingUpdates.current) {
       clearTimeout(pendingUpdates.current);
     }
 
+    // Start loading state
+    setIsLoading(true);
+
     // Schedule Firestore update
-    pendingUpdates.current = setTimeout(() => {
-      updateData(newState);
-    }, 2000);
-  }, [updateData]);
+    pendingUpdates.current = setTimeout(async () => {
+      try {
+        if (pendingData.current) {
+          await updateData(pendingData.current);
+        }
+      } finally {
+        setIsLoading(false);
+        pendingData.current = null;
+      }
+    }, 2000); // 3 seconds delay
+  }, [updateData, setIsLoading]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (pendingUpdates.current) {
         clearTimeout(pendingUpdates.current);
+        setIsLoading(false);
+        pendingData.current = null;
       }
     };
-  }, []);
+  }, [setIsLoading]);
 
   const calculateCurrentMonthIncome = (incomes: Income[]): number => {
     const now = new Date();
