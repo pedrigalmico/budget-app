@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useAppState } from './hooks/useAppState';
-import { FaHome, FaCog } from 'react-icons/fa';
+import { FaHome, FaCog, FaDollarSign, FaArrowUp, FaBullseye, FaChartBar, FaChartPie } from 'react-icons/fa';
 import { AuthProvider } from './contexts/AuthContext';
 import { useFirestore } from './hooks/useFirestore';
 import PrivateRoute from './components/PrivateRoute';
@@ -13,6 +13,7 @@ import Goals from './pages/Goals';
 import Investments from './pages/Investments';
 import Settings from './pages/Settings';
 import Income from './pages/Income';
+import Reports from './pages/Reports';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
@@ -65,6 +66,7 @@ function AppContent() {
             <Route path="/expenses" element={<PrivateRoute><Expenses /></PrivateRoute>} />
             <Route path="/goals" element={<PrivateRoute><Goals /></PrivateRoute>} />
             <Route path="/investments" element={<PrivateRoute><Investments /></PrivateRoute>} />
+            <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
 
             {/* Catch all route */}
@@ -78,6 +80,11 @@ function AppContent() {
             <div className="bottom-nav-container">
               <div className="bottom-nav-items">
                 <NavLink to="/" icon={<FaHome size={20} />} label="Home" />
+                <NavLink to="/income" icon={<FaArrowUp size={20} />} label="Income" />
+                <NavLink to="/expenses" icon={<FaDollarSign size={20} />} label="Expenses" />
+                <NavLink to="/goals" icon={<FaBullseye size={20} />} label="Goals" />
+                <NavLink to="/investments" icon={<FaChartBar size={20} />} label="Invest" />
+                <NavLink to="/reports" icon={<FaChartPie size={20} />} label="Reports" />
                 <NavLink to="/settings" icon={<FaCog size={20} />} label="Settings" />
               </div>
             </div>

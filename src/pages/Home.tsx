@@ -259,11 +259,6 @@ export default function Home() {
               <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthExpenses)}</p>
               <div className="flex justify-between items-center">
                 <p className="text-sm text-gray-400">Monthly Spending</p>
-                <p className="text-sm text-gray-400">
-                  {state.settings.monthlyIncome > 0 
-                    ? `${((currentMonthExpenses / state.settings.monthlyIncome) * 100).toFixed(1)}% of income`
-                    : 'No income set'}
-                </p>
               </div>
             </div>
           </div>
