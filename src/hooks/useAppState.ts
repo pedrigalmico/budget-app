@@ -127,8 +127,8 @@ export const useAppState = () => {
   };
 
   const clearData = () => {
-    localStorage.removeItem('budgetApp'); // Remove data from localStorage
-    setState(defaultState); // Reset state to default values
+    updateData(defaultState); // Update Firestore with empty state
+    setState(defaultState); // Reset local state to default values
   };
 
   const getAvailableBalance = () => {
