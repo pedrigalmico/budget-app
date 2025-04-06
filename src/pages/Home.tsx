@@ -418,9 +418,12 @@ export default function Home() {
                 formatter={(value: number, name: string) => {
                   const categoryKey = name === "Savings Goals" ? "goals" :
                                     name.toLowerCase() as CategoryConfigKey;
+                  const color = categoryConfig[categoryKey].color;
                   return [
-                    `${state.settings.currency} ${formatMoney(value)}`,
-                    <span key={name} style={{ color: categoryConfig[categoryKey].color }}>
+                    <span key="value" style={{ color }}>
+                      {`${state.settings.currency} ${formatMoney(value)}`}
+                    </span>,
+                    <span key={name} style={{ color }}>
                       {name}
                     </span>
                   ];

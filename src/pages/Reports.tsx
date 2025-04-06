@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Income } from '../types';
@@ -17,16 +17,20 @@ const COLORS = [
 ];
 
 const formatNumber = (num: number): string => {
-  if (num >= 1000000000) {
-    return (num / 1000000000).toFixed(1) + 'B';
+  const absNum = Math.abs(num);
+  let formattedNum: string;
+  
+  if (absNum >= 1000000000) {
+    formattedNum = (absNum / 1000000000).toFixed(1) + 'B';
+  } else if (absNum >= 1000000) {
+    formattedNum = (absNum / 1000000).toFixed(1) + 'M';
+  } else if (absNum >= 1000) {
+    formattedNum = (absNum / 1000).toFixed(1) + 'k';
+  } else {
+    formattedNum = absNum.toFixed(0);
   }
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
-  }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'k';
-  }
-  return num.toFixed(0);
+  
+  return num < 0 ? `-${formattedNum}` : formattedNum;
 };
 
 interface CustomLabelProps {
@@ -61,57 +65,100 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 export default function Reports() {
   const { state } = useAppState();
-
-  // Get current month and year
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  // Calculate monthly income
-  const monthlyIncome = state.incomes
-    .filter((income: Income) => {
-      const incomeDate = new Date(income.date);
-      return incomeDate.getMonth() === currentMonth && incomeDate.getFullYear() === currentYear;
-    })
-    .reduce((total: number, income: Income) => total + income.amount, 0);
+  // Generate available years (5 years back from current year)
+  const availableYears = useMemo(() => {
+    const currentYear = now.getFullYear();
+    return Array.from({ length: 6 }, (_, i) => currentYear - 5 + i);
+  }, []);
 
-  // Calculate monthly expenses
-  const monthlyExpenses = state.expenses
-    .filter(expense => {
-      const expenseDate = new Date(expense.date);
-      return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
-    })
-    .reduce((total, expense) => total + expense.amount, 0);
+  // Generate month names
+  const monthNames = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => 
+      new Date(2000, i).toLocaleString('default', { month: 'long' })
+    );
+  }, []);
+
+  // Calculate monthly income with memoization
+  const monthlyIncome = useMemo(() => {
+    return state.incomes
+      .filter((income: Income) => {
+        const incomeDate = new Date(income.date);
+        return incomeDate.getMonth() === selectedMonth && 
+               incomeDate.getFullYear() === selectedYear;
+      })
+      .reduce((total: number, income: Income) => total + income.amount, 0);
+  }, [state.incomes, selectedMonth, selectedYear]);
+
+  // Calculate monthly expenses with memoization
+  const monthlyExpenses = useMemo(() => {
+    return state.expenses
+      .filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate.getMonth() === selectedMonth && 
+               expenseDate.getFullYear() === selectedYear;
+      })
+      .reduce((total, expense) => total + expense.amount, 0);
+  }, [state.expenses, selectedMonth, selectedYear]);
 
   // Calculate remaining budget
   const remainingBudget = monthlyIncome - monthlyExpenses;
   const budgetUsedPercentage = monthlyIncome > 0 ? (monthlyExpenses / monthlyIncome) * 100 : 0;
 
-  // Calculate expenses by category
-  const categoryExpenses = state.expenses
-    .filter(expense => {
-      const expenseDate = new Date(expense.date);
-      return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
-    })
-    .reduce((acc, expense) => {
-      const category = expense.category;
-      if (!acc[category]) {
-        acc[category] = 0;
-      }
-      acc[category] += expense.amount;
-      return acc;
-    }, {} as Record<string, number>);
+  // Calculate expenses by category with memoization
+  const categoryData = useMemo(() => {
+    const categoryExpenses = state.expenses
+      .filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate.getMonth() === selectedMonth && 
+               expenseDate.getFullYear() === selectedYear;
+      })
+      .reduce((acc, expense) => {
+        const category = expense.category;
+        if (!acc[category]) {
+          acc[category] = 0;
+        }
+        acc[category] += expense.amount;
+        return acc;
+      }, {} as Record<string, number>);
 
-  // Convert to array for charts
-  const categoryData = Object.entries(categoryExpenses).map(([name, value]) => ({
-    name,
-    value,
-    percentage: (value / monthlyExpenses) * 100
-  }));
+    return Object.entries(categoryExpenses)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: monthlyExpenses > 0 ? (value / monthlyExpenses) * 100 : 0
+      }))
+      .sort((a, b) => b.value - a.value); // Sort by value in descending order
+  }, [state.expenses, selectedMonth, selectedYear, monthlyExpenses]);
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-100">Monthly Reports</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-100">Monthly Reports</h1>
+        <div className="flex gap-2">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
+          >
+            {monthNames.map((month, index) => (
+              <option key={month} value={index}>{month}</option>
+            ))}
+          </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* Spending Summary */}
       <div className="bg-gray-900 rounded-lg p-4 mb-4">
@@ -127,11 +174,15 @@ export default function Reports() {
           </div>
           <div className="bg-gray-800 p-3 rounded-lg">
             <h3 className="text-xs text-gray-400">Remaining Budget</h3>
-            <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(remainingBudget)}</p>
+            <p className={`text-sm font-bold ${remainingBudget < 0 ? 'text-red-500' : 'text-gray-100'}`}>
+              {state.settings.currency}{formatNumber(remainingBudget)}
+            </p>
           </div>
           <div className="bg-gray-800 p-3 rounded-lg">
             <h3 className="text-xs text-gray-400">Budget Used</h3>
-            <p className="text-sm font-bold text-gray-100">{budgetUsedPercentage.toFixed(1)}%</p>
+            <p className={`text-sm font-bold ${budgetUsedPercentage > 100 ? 'text-red-500' : 'text-gray-100'}`}>
+              {budgetUsedPercentage.toFixed(1)}%
+            </p>
           </div>
         </div>
       </div>
