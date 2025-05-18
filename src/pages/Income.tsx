@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import type { Income as IncomeType, IncomeType as IncomeCategory } from '../types';
-import { FaPlus, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
 const INCOME_TYPES: IncomeCategory[] = ['Salary', 'Freelance', 'Investment', 'Business', 'Other'];
 
@@ -56,7 +56,7 @@ const calculateCurrentMonthIncome = (incomes: IncomeType[]): number => {
 };
 
 export default function Income() {
-  const { state, addIncome, updateIncome } = useAppState();
+  const { state, addIncome, updateIncome, deleteIncome } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [editingIncome, setEditingIncome] = useState<IncomeType | null>(null);
 
@@ -89,6 +89,19 @@ export default function Income() {
   const handleEdit = (income: IncomeType) => {
     setEditingIncome(income);
     setShowForm(true);
+  };
+
+  const handleDelete = (incomeId: string) => {
+    if (window.confirm('Are you sure you want to delete this income?')) {
+      try {
+        deleteIncome(incomeId);
+        setShowForm(false);
+        setEditingIncome(null);
+      } catch (error) {
+        console.error('Failed to delete income:', error);
+        alert('Failed to delete income. Please try again.');
+      }
+    }
   };
 
   return (
@@ -237,6 +250,15 @@ export default function Income() {
                 Cancel
               </button>
             </div>
+            {editingIncome && (
+              <button
+                type="button"
+                onClick={() => handleDelete(editingIncome.id)}
+                className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
+              >
+                <FaTrash /> Delete Income
+              </button>
+            )}
           </form>
         </div>
       )}

@@ -224,6 +224,42 @@ export const useAppState = () => {
     });
   };
 
+  const deleteIncome = (incomeId: string) => {
+    try {
+      const updatedIncomes = state.incomes.filter(income => income.id !== incomeId);
+      updateState({
+        ...state,
+        incomes: updatedIncomes
+      });
+    } catch (error) {
+      console.error('Error deleting income:', error);
+    }
+  };
+
+  const deleteGoal = (goalId: string) => {
+    try {
+      const updatedGoals = state.goals.filter(goal => goal.id !== goalId);
+      updateState({
+        ...state,
+        goals: updatedGoals
+      });
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+    }
+  };
+
+  const deleteInvestment = (investmentId: string) => {
+    try {
+      const updatedInvestments = state.investments.filter(investment => investment.id !== investmentId);
+      updateState({
+        ...state,
+        investments: updatedInvestments
+      });
+    } catch (error) {
+      console.error('Error deleting investment:', error);
+    }
+  };
+
   // Add a helper function for number formatting
   const formatMoney = (amount: number): string => {
     return amount.toLocaleString('en-US', {
@@ -248,6 +284,9 @@ export const useAppState = () => {
     updateIncome,
     formatMoney,
     calculateCurrentMonthIncome,
-    deleteExpense
+    deleteExpense,
+    deleteIncome,
+    deleteGoal,
+    deleteInvestment
   };
 }; 

@@ -9,6 +9,7 @@ export default function Expenses() {
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   // Combine default and custom categories
   const allCategories = [
@@ -16,9 +17,16 @@ export default function Expenses() {
     ...(state.settings.customCategories || []).map(cat => cat.name)
   ];
 
-  const filteredExpenses = state.expenses.filter(expense => 
+  // Filter by month and category
+  let filteredExpenses = state.expenses.filter(expense => 
     expense.date.startsWith(selectedMonth)
   );
+  if (selectedCategory !== 'All') {
+    filteredExpenses = filteredExpenses.filter(expense => expense.category === selectedCategory);
+  }
+
+  // Sort by latest date first
+  filteredExpenses = filteredExpenses.sort((a, b) => b.date.localeCompare(a.date));
 
   // Calculate total expenses for selected month
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -56,12 +64,17 @@ export default function Expenses() {
     if (window.confirm('Are you sure you want to delete this expense?')) {
       try {
         deleteExpense(expenseId);
+        setShowForm(false);
+        setEditingExpense(null);
       } catch (error) {
         console.error('Failed to delete expense:', error);
         alert('Failed to delete expense. Please try again.');
       }
     }
   };
+
+  // Helper for today's date in yyyy-mm-dd
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-6 pb-20">
@@ -130,7 +143,7 @@ export default function Expenses() {
                 id="date"
                 required
                 className="input mt-1"
-                defaultValue={editingExpense?.date}
+                defaultValue={editingExpense?.date || today}
               />
             </div>
 
@@ -162,18 +175,37 @@ export default function Expenses() {
                 Cancel
               </button>
             </div>
+            {editingExpense && (
+              <button
+                type="button"
+                onClick={() => handleDelete(editingExpense.id)}
+                className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
+              >
+                <FaTrash /> Delete Expense
+              </button>
+            )}
           </form>
         </div>
       )}
 
       {/* Month Filter */}
-      <div>
+      <div className="flex gap-4 items-center">
         <input
           type="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
           className="input"
         />
+        <select
+          className="input"
+          value={selectedCategory}
+          onChange={e => setSelectedCategory(e.target.value)}
+        >
+          <option value="All">All Categories</option>
+          {allCategories.map(category => (
+            <option key={category} value={category}>{category}</option>
+          ))}
+        </select>
       </div>
 
       {/* Monthly Total Card */}
@@ -202,22 +234,13 @@ export default function Expenses() {
                     {state.settings.currency} {formatMoney(expense.amount)}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(expense)}
-                    className="btn btn-secondary p-2"
-                    title="Edit"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(expense.id)}
-                    className="btn btn-error p-2"
-                    title="Delete"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleEdit(expense)}
+                  className="btn btn-secondary p-2"
+                  title="Edit"
+                >
+                  <FaEdit />
+                </button>
               </div>
             </div>
           </div>

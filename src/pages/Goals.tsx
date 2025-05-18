@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Goal, Contribution } from '../types';
-import { FaPlus, FaEdit, FaPiggyBank } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaPiggyBank, FaTrash } from 'react-icons/fa';
 
 export default function Goals() {
-  const { state, addGoal, updateGoal, formatMoney } = useAppState();
+  const { state, addGoal, updateGoal, formatMoney, deleteGoal } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [showContributionForm, setShowContributionForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -67,6 +67,19 @@ export default function Goals() {
     setShowContributionForm(false);
     setSelectedGoal(null);
     form.reset();
+  };
+
+  const handleDelete = (goalId: string) => {
+    if (window.confirm('Are you sure you want to delete this goal?')) {
+      try {
+        deleteGoal(goalId);
+        setShowForm(false);
+        setEditingGoal(null);
+      } catch (error) {
+        console.error('Failed to delete goal:', error);
+        alert('Failed to delete goal. Please try again.');
+      }
+    }
   };
 
   return (
@@ -153,6 +166,15 @@ export default function Goals() {
                 Cancel
               </button>
             </div>
+            {editingGoal && (
+              <button
+                type="button"
+                onClick={() => handleDelete(editingGoal.id)}
+                className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
+              >
+                <FaTrash /> Delete Goal
+              </button>
+            )}
           </form>
         </div>
       )}

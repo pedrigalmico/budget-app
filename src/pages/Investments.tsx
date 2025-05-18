@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Investment } from '../types';
-import { FaPlus, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
 export default function Investments() {
-  const { state, addInvestment, updateInvestment } = useAppState();
+  const { state, addInvestment, updateInvestment, deleteInvestment } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
 
@@ -37,6 +37,19 @@ export default function Investments() {
   const handleEdit = (investment: Investment) => {
     setEditingInvestment(investment);
     setShowForm(true);
+  };
+
+  const handleDelete = (investmentId: string) => {
+    if (window.confirm('Are you sure you want to delete this investment?')) {
+      try {
+        deleteInvestment(investmentId);
+        setShowForm(false);
+        setEditingInvestment(null);
+      } catch (error) {
+        console.error('Failed to delete investment:', error);
+        alert('Failed to delete investment. Please try again.');
+      }
+    }
   };
 
   const calculateReturn = (investment: Investment) => {
@@ -141,6 +154,15 @@ export default function Investments() {
                 Cancel
               </button>
             </div>
+            {editingInvestment && (
+              <button
+                type="button"
+                onClick={() => handleDelete(editingInvestment.id)}
+                className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
+              >
+                <FaTrash /> Delete Investment
+              </button>
+            )}
           </form>
         </div>
       )}
