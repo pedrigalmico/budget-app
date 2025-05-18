@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Expense } from '../types';
-import { FaPlus, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import { DEFAULT_CATEGORIES } from '../config/categories';
 
 export default function Expenses() {
-  const { state, addExpense, updateExpense, formatMoney } = useAppState();
+  const { state, addExpense, updateExpense, deleteExpense, formatMoney } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -50,6 +50,17 @@ export default function Expenses() {
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense);
     setShowForm(true);
+  };
+
+  const handleDelete = (expenseId: string) => {
+    if (window.confirm('Are you sure you want to delete this expense?')) {
+      try {
+        deleteExpense(expenseId);
+      } catch (error) {
+        console.error('Failed to delete expense:', error);
+        alert('Failed to delete expense. Please try again.');
+      }
+    }
   };
 
   return (
@@ -99,7 +110,7 @@ export default function Expenses() {
                 id="category" 
                 required 
                 className="input mt-1"
-                defaultValue={editingExpense?.category || allCategories[0]}
+                defaultValue={editingExpense?.category}
               >
                 {allCategories.map(category => (
                   <option key={category} value={category}>
@@ -191,12 +202,22 @@ export default function Expenses() {
                     {state.settings.currency} {formatMoney(expense.amount)}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleEdit(expense)}
-                  className="btn btn-secondary p-2"
-                >
-                  <FaEdit />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(expense)}
+                    className="btn btn-secondary p-2"
+                    title="Edit"
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(expense.id)}
+                    className="btn btn-error p-2"
+                    title="Delete"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

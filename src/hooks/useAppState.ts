@@ -186,6 +186,19 @@ export const useAppState = () => {
     });
   };
 
+  const deleteExpense = (expenseId: string) => {
+    try {
+      const updatedExpenses = state.expenses.filter(expense => expense.id !== expenseId);
+      updateState({
+        ...state,
+        expenses: updatedExpenses
+      });
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      // Optionally show an error message to the user
+    }
+  };
+
   const updateInvestment = (updatedInvestment: Investment) => {
     updateState({
       ...state,
@@ -234,6 +247,7 @@ export const useAppState = () => {
     addIncome,
     updateIncome,
     formatMoney,
-    calculateCurrentMonthIncome
+    calculateCurrentMonthIncome,
+    deleteExpense
   };
 }; 
