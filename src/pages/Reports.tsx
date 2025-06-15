@@ -135,111 +135,113 @@ export default function Reports() {
   }, [state.expenses, selectedMonth, selectedYear, monthlyExpenses]);
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-100">Monthly Reports</h1>
-        <div className="flex gap-2">
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
-          >
-            {monthNames.map((month, index) => (
-              <option key={month} value={index}>{month}</option>
-            ))}
-          </select>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
-          >
-            {availableYears.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Spending Summary */}
-      <div className="bg-gray-900 rounded-lg p-4 mb-4">
-        <h2 className="text-base font-medium mb-3 text-gray-100">Spending Summary</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-gray-800 p-3 rounded-lg">
-            <h3 className="text-xs text-gray-400">Monthly Income</h3>
-            <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(monthlyIncome)}</p>
-          </div>
-          <div className="bg-gray-800 p-3 rounded-lg">
-            <h3 className="text-xs text-gray-400">Monthly Expenses</h3>
-            <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(monthlyExpenses)}</p>
-          </div>
-          <div className="bg-gray-800 p-3 rounded-lg">
-            <h3 className="text-xs text-gray-400">Remaining Budget</h3>
-            <p className={`text-sm font-bold ${remainingBudget < 0 ? 'text-red-500' : 'text-gray-100'}`}>
-              {state.settings.currency}{formatNumber(remainingBudget)}
-            </p>
-          </div>
-          <div className="bg-gray-800 p-3 rounded-lg">
-            <h3 className="text-xs text-gray-400">Budget Used</h3>
-            <p className={`text-sm font-bold ${budgetUsedPercentage > 100 ? 'text-red-500' : 'text-gray-100'}`}>
-              {budgetUsedPercentage.toFixed(1)}%
-            </p>
+    <div className="min-h-screen p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-100">Monthly Reports</h1>
+          <div className="flex gap-2">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
+            >
+              {monthNames.map((month, index) => (
+                <option key={month} value={index}>{month}</option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
           </div>
         </div>
-      </div>
 
-      {/* Category Breakdown */}
-      <div className="bg-gray-900 rounded-lg p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-base font-medium text-gray-100">Category Breakdown</h2>
+        {/* Spending Summary */}
+        <div className="bg-gray-900 rounded-lg p-4 mb-4">
+          <h2 className="text-base font-medium mb-3 text-gray-100">Spending Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <h3 className="text-xs text-gray-400">Monthly Income</h3>
+              <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(monthlyIncome)}</p>
+            </div>
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <h3 className="text-xs text-gray-400">Monthly Expenses</h3>
+              <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(monthlyExpenses)}</p>
+            </div>
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <h3 className="text-xs text-gray-400">Remaining Budget</h3>
+              <p className={`text-sm font-bold ${remainingBudget < 0 ? 'text-red-500' : 'text-gray-100'}`}>
+                {state.settings.currency}{formatNumber(remainingBudget)}
+              </p>
+            </div>
+            <div className="bg-gray-800 p-3 rounded-lg">
+              <h3 className="text-xs text-gray-400">Budget Used</h3>
+              <p className={`text-sm font-bold ${budgetUsedPercentage > 100 ? 'text-red-500' : 'text-gray-100'}`}>
+                {budgetUsedPercentage.toFixed(1)}%
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={renderCustomizedLabel}
-                outerRadius={130}
-                innerRadius={50}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1F2937', border: 'none', fontSize: '8px' }} 
-                itemStyle={{ fontSize: '9px', color: '#ffffff' }}
-                labelStyle={{ color: '#ffffff' }}
-              />
-              <Legend 
-                formatter={(value) => <span className="text-gray-300">{value}</span>}
-                wrapperStyle={{ fontSize: '8px' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Category Breakdown */}
+        <div className="bg-gray-900 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base font-medium text-gray-100">Category Breakdown</h2>
+          </div>
 
-        {/* Category List */}
-        <div className="mt-4">
-          <h3 className="text-base font-medium mb-2 text-gray-100">Detailed Breakdown</h3>
-          <div className="space-y-2">
-            {categoryData.map((category, index) => (
-              <div key={category.name} className="flex justify-between items-center p-2.5 bg-gray-800 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                  <span className="text-gray-300 text-sm">{category.name}</span>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={renderCustomizedLabel}
+                  outerRadius={130}
+                  innerRadius={50}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', fontSize: '8px' }} 
+                  itemStyle={{ fontSize: '9px', color: '#ffffff' }}
+                  labelStyle={{ color: '#ffffff' }}
+                />
+                <Legend 
+                  formatter={(value) => <span className="text-gray-300">{value}</span>}
+                  wrapperStyle={{ fontSize: '8px' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Category List */}
+          <div className="mt-4">
+            <h3 className="text-base font-medium mb-2 text-gray-100">Detailed Breakdown</h3>
+            <div className="space-y-2">
+              {categoryData.map((category, index) => (
+                <div key={category.name} className="flex justify-between items-center p-2.5 bg-gray-800 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                    <span className="text-gray-300 text-sm">{category.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-gray-100 text-sm">{state.settings.currency}{formatNumber(category.value)}</div>
+                    <div className="text-xs text-gray-400">{category.percentage.toFixed(1)}%</div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-medium text-gray-100 text-sm">{state.settings.currency}{formatNumber(category.value)}</div>
-                  <div className="text-xs text-gray-400">{category.percentage.toFixed(1)}%</div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

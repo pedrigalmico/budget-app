@@ -10,19 +10,30 @@ export default function Expenses() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Combine default and custom categories
+  // Combine default and custom categories, filtering out disabled default categories
   const allCategories = [
-    ...DEFAULT_CATEGORIES,
+    ...DEFAULT_CATEGORIES.filter(cat => !(state.settings.disabledDefaultCategories || []).includes(cat)),
     ...(state.settings.customCategories || []).map(cat => cat.name)
   ];
 
-  // Filter by month and category
-  let filteredExpenses = state.expenses.filter(expense => 
-    expense.date.startsWith(selectedMonth)
-  );
-  if (selectedCategory !== 'All') {
-    filteredExpenses = filteredExpenses.filter(expense => expense.category === selectedCategory);
+  let filteredExpenses: Expense[];
+
+  // Apply search query filter globally (not just current month)
+  if (searchQuery) {
+    filteredExpenses = state.expenses.filter(expense => 
+      expense.note?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      expense.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  } else {
+    // Filter by month and category only if no search query is present
+    filteredExpenses = state.expenses.filter(expense => 
+      expense.date.startsWith(selectedMonth)
+    );
+    if (selectedCategory !== 'All') {
+      filteredExpenses = filteredExpenses.filter(expense => expense.category === selectedCategory);
+    }
   }
 
   // Sort by latest date first
@@ -187,6 +198,15 @@ export default function Expenses() {
           </form>
         </div>
       )}
+
+      {/* Search Bar */}
+      <input
+        type="text"
+        placeholder="Search expenses by note or category..."
+        className="input mb-4"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
 
       {/* Month Filter */}
       <div className="flex gap-4 items-center">

@@ -4,10 +4,10 @@
 
 @layer base {
   html, body {
-    @apply h-full w-full;
+    @apply w-full;
   }
   body {
-    @apply bg-gray-950 text-gray-100;
+    @apply bg-gray-950 text-gray-100 min-h-screen;
   }
   #root {
     @apply h-full w-full;
@@ -96,8 +96,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -139,17 +137,12 @@ button:focus-visible {
   }
 }
 
-/* Remove default styles */
-:root {
-  color-scheme: light dark;
-}
-
 /* Remove conflicting dark mode styles */
 @media (prefers-color-scheme: dark) {
   :root {
-    background-color: transparent;
+    /* background-color: transparent; */
   }
   body {
-    background-color: transparent;
+    /* background-color: transparent; */
   }
 }
