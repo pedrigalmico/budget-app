@@ -254,7 +254,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold dark:text-white">Welcome Back, MiKai</h1>
@@ -263,7 +263,7 @@ export default function Home() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <button
             onClick={() => navigate('/income')}
             className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-emerald-500/50 overflow-hidden group"
@@ -340,7 +340,7 @@ export default function Home() {
         </div>
 
         {/* Period Selector */}
-        <div className="flex gap-4 items-center mb-3 mt-6">
+        <div className="flex gap-4 items-center mb-3">
           <button
             className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
             onClick={() => setViewType('month')}
@@ -382,7 +382,7 @@ export default function Home() {
         </div>
 
         {/* Graph */}
-        <div className="card p-0 mb-8">
+        <div className="card p-4 mb-8">
           <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>

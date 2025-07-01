@@ -183,13 +183,17 @@ export default function Savings() {
   }
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="space-y-6 pb-20">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold dark:text-white">Savings</h1>
+        <div className="w-10"></div>
+      </div>
       <div className="max-w-4xl mx-auto">
         <div className="flex gap-4 mb-4">
           {PERIODS.map(p => (
             <button
               key={p}
-              className={`rounded-full px-6 py-2 text-lg font-medium transition-all ${period === p ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+              className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${period === p ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
               onClick={() => setPeriod(p)}
             >
               {p}
