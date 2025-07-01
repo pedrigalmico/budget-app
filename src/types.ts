@@ -6,6 +6,7 @@ export interface Expense {
   category: string;
   date: string;
   note?: string;
+  accountType: 'credit' | 'debit';
 }
 
 export interface Investment {

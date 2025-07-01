@@ -225,290 +225,275 @@ export default function Home() {
       }
     }
 
+    // Savings for the current month
+    const month = selectedMonth;
+    const year = selectedYear;
+    const monthIncome = state.incomes
+      .filter(income => {
+        const date = new Date(income.date);
+        return date.getMonth() === month && date.getFullYear() === year;
+      })
+      .reduce((sum, income) => sum + income.amount, 0);
+    const monthExpenses = state.expenses
+      .filter(expense => {
+        const date = new Date(expense.date);
+        return date.getMonth() === month && date.getFullYear() === year;
+      })
+      .reduce((sum, expense) => sum + expense.amount, 0);
+    const monthContributions = state.goals.flatMap(goal => goal.contributions || []).filter(contribution => {
+      const date = new Date(contribution.date);
+      return date.getMonth() === month && date.getFullYear() === year;
+    }).reduce((sum, c) => sum + c.amount, 0);
+    const monthSavings = monthIncome - monthExpenses - monthContributions;
+    insights.push({
+      icon: <FaPiggyBank className={monthSavings >= 0 ? 'text-emerald-500' : 'text-red-500'} size={20} />,
+      text: <span>Savings for this month: <span className={monthSavings >= 0 ? 'text-emerald-500' : 'text-red-500'}>{state.settings.currency}{formatMoney(monthSavings)}</span></span>
+    });
+
     return insights;
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Welcome Back, MiKai</h1>
+    <div className="min-h-screen p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold dark:text-white">Welcome Back, MiKai</h1>
+          {/* Empty div for consistent spacing when there's no right-aligned element */}
+          <div className="w-10"></div>
+        </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate('/income')}
-          className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-emerald-500/50 overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <FaArrowRight className="absolute top-3 right-3 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
-          <div className="relative">
-            <div className="flex items-center gap-2">
-              {categoryConfig.income.icon}
-              <h3 className="font-semibold">Income</h3>
-            </div>
-            <div>
-              <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthIncome)}</p>
-              <p className="text-sm text-gray-400">This Month</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate('/expenses')}
-          className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-red-500/50 overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <FaArrowRight className="absolute top-3 right-3 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
-          <div className="relative">
-            <div className="flex items-center gap-2">
-              {categoryConfig.expenses.icon}
-              <h3 className="font-semibold">Expenses</h3>
-            </div>
-            <div>
-              <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthExpenses)}</p>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-400">Monthly Spending</p>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => navigate('/income')}
+            className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-emerald-500/50 overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <FaArrowRight className="absolute top-3 right-3 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                {categoryConfig.income.icon}
+                <h3 className="font-semibold">Income</h3>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthIncome)}</p>
+                <p className="text-sm text-gray-400">This Month</p>
               </div>
             </div>
-          </div>
-        </button>
+          </button>
 
-        <button
-          onClick={() => navigate('/investments')}
-          className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-indigo-500/50 overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <FaArrowRight className="absolute top-3 right-3 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
-          <div className="relative">
-            <div className="flex items-center gap-2">
-              {categoryConfig.investments.icon}
-              <h3 className="font-semibold">Investments</h3>
-            </div>
-            <div>
-              <p className="text-lg font-bold">{state.settings.currency}{formatMoney(totalInvestments)}</p>
-              <p className="text-sm text-gray-400">Total Value</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate('/goals')}
-          className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-amber-500/50 overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <FaArrowRight className="absolute top-3 right-3 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
-          <div className="relative">
-            <div className="flex items-center gap-2">
-              {categoryConfig.goals.icon}
-              <h3 className="font-semibold">Goals</h3>
-            </div>
-            <div>
-              <p className="text-lg font-bold">{state.settings.currency}{formatMoney(totalGoals)}</p>
-              <p className="text-sm text-gray-400">Total Progress</p>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {/* Graph Controls */}
-      <div>
-        <div className="flex justify-start items-center gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewType('month')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                viewType === 'month' ? 'bg-blue-500' : 'bg-gray-700'
-              }`}
-            >
-              Month
-            </button>
-            {viewType === 'month' && (
-              <>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="bg-gray-700 text-sm rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {monthNames.map((month, index) => (
-                    <option key={month} value={index}>{month}</option>
-                  ))}
-                </select>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="bg-gray-700 text-sm rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {availableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </>
-            )}
-          </div>
           <button
+            onClick={() => navigate('/expenses')}
+            className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-red-500/50 overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <FaArrowRight className="absolute top-3 right-3 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                {categoryConfig.expenses.icon}
+                <h3 className="font-semibold">Expenses</h3>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthExpenses)}</p>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-400">Monthly Spending</p>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/investments')}
+            className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-indigo-500/50 overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <FaArrowRight className="absolute top-3 right-3 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                {categoryConfig.investments.icon}
+                <h3 className="font-semibold">Investments</h3>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{state.settings.currency}{formatMoney(totalInvestments)}</p>
+                <p className="text-sm text-gray-400">Total Value</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/goals')}
+            className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-amber-500/50 overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <FaArrowRight className="absolute top-3 right-3 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0" size={16} />
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                {categoryConfig.goals.icon}
+                <h3 className="font-semibold">Goals</h3>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{state.settings.currency}{formatMoney(totalGoals)}</p>
+                <p className="text-sm text-gray-400">Total Progress</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Period Selector */}
+        <div className="flex gap-4 items-center mb-3 mt-6">
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            onClick={() => setViewType('month')}
+          >
+            Month
+          </button>
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'ytd' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
             onClick={() => setViewType('ytd')}
-            className={`px-3 py-1 rounded-full text-sm ${
-              viewType === 'ytd' ? 'bg-blue-500' : 'bg-gray-700'
-            }`}
           >
             YTD
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewType('year')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                viewType === 'year' ? 'bg-blue-500' : 'bg-gray-700'
-              }`}
-            >
-              Year
-            </button>
-            {viewType === 'year' && (
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="bg-gray-700 text-sm rounded-full px-3 py-1 border-none focus:ring-2 focus:ring-blue-500"
-              >
-                {availableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            )}
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'year' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            onClick={() => setViewType('year')}
+          >
+            Year
+          </button>
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex flex-wrap gap-4 mb-7">
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('income') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            onClick={() => setSelectedCategories(prev => prev.includes('income') ? prev.filter(c => c !== 'income') : [...prev, 'income'])}
+          >Income</button>
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('expenses') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            onClick={() => setSelectedCategories(prev => prev.includes('expenses') ? prev.filter(c => c !== 'expenses') : [...prev, 'expenses'])}
+          >Expenses</button>
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('investments') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            onClick={() => setSelectedCategories(prev => prev.includes('investments') ? prev.filter(c => c !== 'investments') : [...prev, 'investments'])}
+          >Investments</button>
+          <button
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('goals') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            onClick={() => setSelectedCategories(prev => prev.includes('goals') ? prev.filter(c => c !== 'goals') : [...prev, 'goals'])}
+          >Goals</button>
+        </div>
+
+        {/* Graph */}
+        <div className="card p-0 mb-8">
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                />
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                  tickFormatter={formatYAxis}
+                />
+                <Tooltip 
+                  formatter={(value: number, name: string) => {
+                    const categoryKey = name === "Savings Goals" ? "goals" :
+                                      name.toLowerCase() as CategoryConfigKey;
+                    const color = categoryConfig[categoryKey].color;
+                    return [
+                      <span key="value" style={{ color }}>
+                        {`${state.settings.currency} ${formatMoney(value)}`}
+                      </span>,
+                      <span key={name} style={{ color }}>
+                        {name}
+                      </span>
+                    ];
+                  }}
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    padding: '0.5rem'
+                  }}
+                  itemStyle={{ color: '#F3F4F6' }}
+                  labelStyle={{ color: '#9CA3AF', marginBottom: '0.25rem' }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={24}
+                  iconType="circle"
+                  wrapperStyle={{
+                    fontSize: '11px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    paddingLeft: '60px'
+                  }}
+                />
+                
+                {selectedCategories.includes('income') && (
+                  <Line 
+                    name="Income"
+                    type="monotone" 
+                    dataKey="income" 
+                    stroke={categoryConfig.income.color}
+                    strokeWidth={2}
+                    dot={{ fill: categoryConfig.income.color, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                )}
+                {selectedCategories.includes('expenses') && (
+                  <Line 
+                    name="Expenses"
+                    type="monotone" 
+                    dataKey="expenses" 
+                    stroke={categoryConfig.expenses.color}
+                    strokeWidth={2}
+                    dot={{ fill: categoryConfig.expenses.color, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                )}
+                {selectedCategories.includes('investments') && (
+                  <Line 
+                    name="Investments"
+                    type="monotone" 
+                    dataKey="investments" 
+                    stroke={categoryConfig.investments.color}
+                    strokeWidth={2}
+                    dot={{ fill: categoryConfig.investments.color, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                )}
+                {selectedCategories.includes('goals') && (
+                  <Line 
+                    name="Savings Goals"
+                    type="monotone" 
+                    dataKey="goals" 
+                    stroke={categoryConfig.goals.color}
+                    strokeWidth={2}
+                    dot={{ fill: categoryConfig.goals.color, r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
-        <div className="flex gap-2">
-          {Object.entries(categoryConfig).map(([category, config]) => (
-            <button
-              key={category}
-              onClick={() => {
-                setSelectedCategories(prev =>
-                  prev.includes(category as Category)
-                    ? prev.filter(c => c !== category)
-                    : [...prev, category as Category]
-                );
-              }}
-              className={`px-3 py-1 rounded-full text-sm ${
-                selectedCategories.includes(category as Category)
-                  ? `bg-blue-500 bg-${config.color} text-${config.color}`
-                  : 'bg-gray-700'
-              }`}
-            >
-              {category.charAt(0).toUpperCase() + category.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Graph */}
-      <div className="card p-0">
-        <div className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
-              <XAxis 
-                dataKey="date" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#9CA3AF', fontSize: 12 }}
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                tickFormatter={formatYAxis}
-              />
-              <Tooltip 
-                formatter={(value: number, name: string) => {
-                  const categoryKey = name === "Savings Goals" ? "goals" :
-                                    name.toLowerCase() as CategoryConfigKey;
-                  const color = categoryConfig[categoryKey].color;
-                  return [
-                    <span key="value" style={{ color }}>
-                      {`${state.settings.currency} ${formatMoney(value)}`}
-                    </span>,
-                    <span key={name} style={{ color }}>
-                      {name}
-                    </span>
-                  ];
-                }}
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: 'none',
-                  borderRadius: '0.375rem',
-                  padding: '0.5rem'
-                }}
-                itemStyle={{ color: '#F3F4F6' }}
-                labelStyle={{ color: '#9CA3AF', marginBottom: '0.25rem' }}
-              />
-              <Legend 
-                verticalAlign="bottom" 
-                height={24}
-                iconType="circle"
-                wrapperStyle={{
-                  fontSize: '11px',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  paddingLeft: '60px'
-                }}
-              />
-              
-              {selectedCategories.includes('income') && (
-                <Line 
-                  name="Income"
-                  type="monotone" 
-                  dataKey="income" 
-                  stroke={categoryConfig.income.color}
-                  strokeWidth={2}
-                  dot={{ fill: categoryConfig.income.color, r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {selectedCategories.includes('expenses') && (
-                <Line 
-                  name="Expenses"
-                  type="monotone" 
-                  dataKey="expenses" 
-                  stroke={categoryConfig.expenses.color}
-                  strokeWidth={2}
-                  dot={{ fill: categoryConfig.expenses.color, r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {selectedCategories.includes('investments') && (
-                <Line 
-                  name="Investments"
-                  type="monotone" 
-                  dataKey="investments" 
-                  stroke={categoryConfig.investments.color}
-                  strokeWidth={2}
-                  dot={{ fill: categoryConfig.investments.color, r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {selectedCategories.includes('goals') && (
-                <Line 
-                  name="Savings Goals"
-                  type="monotone" 
-                  dataKey="goals" 
-                  stroke={categoryConfig.goals.color}
-                  strokeWidth={2}
-                  dot={{ fill: categoryConfig.goals.color, r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Insights */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Insights</h2>
-        <div className="space-y-3">
-          {getInsights().map((insight, index) => (
-            <div key={index} className="card flex items-start gap-3">
-              <div className="mt-1">{insight.icon}</div>
-              <p>{insight.text}</p>
-            </div>
-          ))}
+        {/* Insights */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Insights</h2>
+          <div className="space-y-3">
+            {getInsights().map((insight, index) => (
+              <div key={index} className="card flex items-start gap-3">
+                <div className="mt-1">{insight.icon}</div>
+                <p>{insight.text}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

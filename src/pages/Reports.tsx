@@ -138,7 +138,7 @@ export default function Reports() {
     <div className="min-h-screen p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-100">Monthly Reports</h1>
+          <h1 className="text-2xl font-bold text-gray-100 dark:text-white">Monthly Reports</h1>
           <div className="flex gap-2">
             <select
               value={selectedMonth}

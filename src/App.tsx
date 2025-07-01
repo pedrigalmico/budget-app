@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useAppState } from './hooks/useAppState';
-import { FaHome, FaCog, FaDollarSign, FaArrowUp, FaBullseye, FaChartBar, FaChartPie } from 'react-icons/fa';
+import { FaHome, FaCog, FaDollarSign, FaArrowUp, FaBullseye, FaChartBar, FaChartPie, FaPiggyBank } from 'react-icons/fa';
 import { AuthProvider } from './contexts/AuthContext';
 import { LoadingProvider } from './contexts/LoadingContext';
 import { useFirestore } from './hooks/useFirestore';
@@ -17,6 +17,7 @@ import Income from './pages/Income';
 import Reports from './pages/Reports';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Savings from './pages/Savings';
 
 function NavLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
@@ -69,6 +70,7 @@ function AppContent() {
             <Route path="/investments" element={<PrivateRoute><Investments /></PrivateRoute>} />
             <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+            <Route path="/savings" element={<PrivateRoute><Savings /></PrivateRoute>} />
 
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -86,6 +88,7 @@ function AppContent() {
                 <NavLink to="/goals" icon={<FaBullseye size={20} />} label="Goals" />
                 <NavLink to="/investments" icon={<FaChartBar size={20} />} label="Invest" />
                 <NavLink to="/reports" icon={<FaChartPie size={20} />} label="Reports" />
+                <NavLink to="/savings" icon={<FaPiggyBank size={20} />} label="Savings" />
                 <NavLink to="/settings" icon={<FaCog size={20} />} label="Settings" />
               </div>
             </div>

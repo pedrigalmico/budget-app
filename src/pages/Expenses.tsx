@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
-import { Expense } from '../types';
+import { Expense as ExpenseType } from '../types';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import { DEFAULT_CATEGORIES } from '../config/categories';
 
@@ -8,31 +8,31 @@ export default function Expenses() {
   const { state, addExpense, updateExpense, deleteExpense, formatMoney } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editingExpense, setEditingExpense] = useState<ExpenseType | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Combine default and custom categories, filtering out disabled default categories
   const allCategories = [
-    ...DEFAULT_CATEGORIES.filter(cat => !(state.settings.disabledDefaultCategories || []).includes(cat)),
-    ...(state.settings.customCategories || []).map(cat => cat.name)
+    ...DEFAULT_CATEGORIES.filter((cat: string) => !(state.settings.disabledDefaultCategories || []).includes(cat)),
+    ...(state.settings.customCategories || []).map((cat: { name: string }) => cat.name)
   ];
 
-  let filteredExpenses: Expense[];
+  let filteredExpenses: ExpenseType[];
 
   // Apply search query filter globally (not just current month)
   if (searchQuery) {
-    filteredExpenses = state.expenses.filter(expense => 
+    filteredExpenses = state.expenses.filter((expense: ExpenseType) => 
       expense.note?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       expense.category.toLowerCase().includes(searchQuery.toLowerCase())
     );
   } else {
     // Filter by month and category only if no search query is present
-    filteredExpenses = state.expenses.filter(expense => 
+    filteredExpenses = state.expenses.filter((expense: ExpenseType) => 
       expense.date.startsWith(selectedMonth)
     );
     if (selectedCategory !== 'All') {
-      filteredExpenses = filteredExpenses.filter(expense => expense.category === selectedCategory);
+      filteredExpenses = filteredExpenses.filter((expense: ExpenseType) => expense.category === selectedCategory);
     }
   }
 
@@ -47,12 +47,13 @@ export default function Expenses() {
     const form = e.currentTarget;
     const formData = new FormData(form);
     
-    const expenseData: Expense = {
+    const expenseData: ExpenseType = {
       id: editingExpense?.id || crypto.randomUUID(),
       amount: parseFloat(formData.get('amount') as string) || 0,
       category: formData.get('category') as string,
       date: formData.get('date') as string,
-      note: (formData.get('note') as string) || undefined
+      note: (formData.get('note') as string) || undefined,
+      accountType: formData.get('accountType') as 'credit' | 'debit',
     };
 
     if (editingExpense) {
@@ -66,7 +67,7 @@ export default function Expenses() {
     form.reset();
   };
 
-  const handleEdit = (expense: Expense) => {
+  const handleEdit = (expense: ExpenseType) => {
     setEditingExpense(expense);
     setShowForm(true);
   };
@@ -89,7 +90,7 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold dark:text-white">Expenses</h1>
         <button
           onClick={() => {
@@ -171,6 +172,34 @@ export default function Expenses() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Account Type
+              </label>
+              <div className="flex gap-4 mt-1">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="credit"
+                    required
+                    defaultChecked={editingExpense ? editingExpense.accountType === 'credit' : true}
+                  />
+                  Credit
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="debit"
+                    required
+                    defaultChecked={editingExpense ? editingExpense.accountType === 'debit' : false}
+                  />
+                  Debit
+                </label>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button type="submit" className="btn btn-primary flex-1">
                 {editingExpense ? 'Save Changes' : 'Add Expense'}
@@ -238,7 +267,7 @@ export default function Expenses() {
 
       {/* Expenses List */}
       <div className="space-y-4">
-        {filteredExpenses.map(expense => (
+        {filteredExpenses.map((expense: ExpenseType) => (
           <div key={expense.id} className="card">
             <div className="flex justify-between items-start">
               <div>
@@ -246,6 +275,7 @@ export default function Expenses() {
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   {new Date(expense.date).toLocaleDateString()}
                   {expense.note && ` - ${expense.note}`}
+                  {` - ${(expense.accountType ? expense.accountType.charAt(0).toUpperCase() + expense.accountType.slice(1) : 'N/A')}`}
                 </div>
               </div>
               <div className="flex items-start gap-4">

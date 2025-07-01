@@ -108,8 +108,8 @@ export default function Income() {
     <div className="min-h-screen p-4">
       <div className="max-w-4xl mx-auto">
         <div className="space-y-6 pb-20">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Income Sources</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold dark:text-white">Income Sources</h1>
             <button
               onClick={() => setShowForm(true)}
               className="btn btn-primary flex items-center gap-2"
