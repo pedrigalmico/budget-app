@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
+import {
   User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -32,31 +32,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Setting up auth state listener');
     const unsubscribe = onAuthStateChanged(auth, user => {
-      console.log('Auth state changed:', user ? `User logged in: ${user.email}` : 'No user');
       setCurrentUser(user);
       setLoading(false);
-    }, (error) => {
-      console.error('Auth state change error:', error);
+    }, () => {
       setLoading(false);
     });
 
     return () => {
-      console.log('Cleaning up auth state listener');
       unsubscribe();
     };
   }, []);
 
   async function signup(email: string, password: string): Promise<UserCredential> {
-    console.log('Attempting to sign up user:', email);
     try {
       setLoading(true);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('Sign up successful:', userCredential.user.email);
       return userCredential;
     } catch (error: any) {
-      console.error('Sign up error in AuthContext:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -64,14 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function login(email: string, password: string): Promise<UserCredential> {
-    console.log('Attempting to log in user:', email);
     try {
       setLoading(true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Login successful:', userCredential.user.email);
       return userCredential;
     } catch (error: any) {
-      console.error('Login error in AuthContext:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -79,13 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout(): Promise<void> {
-    console.log('Attempting to log out user');
     try {
       setLoading(true);
       await signOut(auth);
-      console.log('Logout successful');
     } catch (error: any) {
-      console.error('Logout error in AuthContext:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -100,11 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout
   };
 
-  console.log('AuthContext current state:', { currentUser: currentUser?.email, loading });
-
   return (
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-} 
+}

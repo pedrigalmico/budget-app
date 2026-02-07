@@ -16,9 +16,7 @@ export default function Login() {
     try {
       setError('');
       setLoading(true);
-      console.log('Attempting to log in with:', email);
       await login(email, password);
-      console.log('Login successful, navigating to home');
       navigate('/');
     } catch (err) {
       console.error('Login error:', err);

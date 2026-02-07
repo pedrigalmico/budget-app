@@ -14,7 +14,6 @@ export default function Signup() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log('Signup form submitted');
 
     if (password !== confirmPassword) {
       return setError('Passwords do not match');
@@ -27,15 +26,11 @@ export default function Signup() {
     try {
       setError('');
       setLoading(true);
-      console.log('Attempting to sign up with:', email);
-      const userCredential = await signup(email, password);
-      console.log('Signup successful!', userCredential.user.email);
-      
+      await signup(email, password);
+
       // Wait for Firebase to update the auth state
-      console.log('Waiting for auth state to update...');
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log('Navigating to home page...');
+
       navigate('/', { replace: true });
     } catch (err) {
       console.error('Signup error:', err);

@@ -13,20 +13,13 @@ const firebaseConfig = {
   measurementId: "G-J20ZY6D5BF"
 };
 
-console.log('Initializing Firebase with config:', firebaseConfig);
 const app = initializeApp(firebaseConfig);
-console.log('Firebase initialized successfully');
-
 export const auth = getAuth(app);
-console.log('Firebase Auth initialized');
-
 export const db = getFirestore(app);
-console.log('Firestore initialized');
 
 let analytics = null;
 if (typeof window !== 'undefined') {
   analytics = getAnalytics(app);
-  console.log('Firebase Analytics initialized');
 }
 
 export { analytics };

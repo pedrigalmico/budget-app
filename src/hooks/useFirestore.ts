@@ -14,7 +14,6 @@ export function useFirestore() {
   // Load initial data and subscribe to updates
   useEffect(() => {
     if (!currentUser) {
-      console.log('No current user, skipping Firestore initialization');
       return;
     }
 
@@ -31,12 +30,10 @@ export function useFirestore() {
           
           // Only update if data has actually changed
           if (dataString !== lastUpdate.current) {
-            console.log('Received new data from Firestore');
             setData(userData);
             lastUpdate.current = dataString;
           }
         } else {
-          console.log('Initializing with default state');
           const defaultState: AppState = {
             expenses: [],
             goals: [],
@@ -98,7 +95,6 @@ export function useFirestore() {
 
   const updateData = async (newData: AppState) => {
     if (!currentUser) {
-      console.log('No current user, skipping Firestore update');
       return;
     }
 
@@ -107,7 +103,6 @@ export function useFirestore() {
     
     // Only update if data has actually changed
     if (dataString === lastUpdate.current) {
-      console.log('Data unchanged, skipping Firestore update');
       return;
     }
 
@@ -122,7 +117,6 @@ export function useFirestore() {
         const userDoc = doc(db, 'users', currentUser.uid);
         await setDoc(userDoc, cleanedData);
         lastUpdate.current = dataString;
-        console.log('Data saved to Firestore');
         setError(null);
       } catch (error) {
         console.error('Error saving data:', error);

@@ -40,11 +40,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (currentUser) {
-    console.log('User is authenticated, redirecting to home');
     return <Navigate to="/" replace />;
   }
 
-  console.log('User is not authenticated, showing public route');
   return <>{children}</>;
 }
 
