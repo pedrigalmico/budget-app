@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,11 +6,219 @@ import type { Settings as SettingsType } from '../types';
 import { DEFAULT_CATEGORIES, createCategory } from '../config/categories';
 
 export default function Settings() {
-  const { state, updateSettings, clearData } = useAppState();
+  const { state, updateSettings, clearData, formatMoney } = useAppState();
   const [showConfirm, setShowConfirm] = useState(false);
   const [newCategory, setNewCategory] = useState('');
+  const [exportStatus, setExportStatus] = useState('');
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  const downloadFile = useCallback((content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleExportJSON = useCallback(() => {
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      currency: state.settings.currency,
+      expenses: state.expenses,
+      incomes: state.incomes,
+      investments: state.investments,
+      goals: state.goals,
+      settings: {
+        monthlyIncome: state.settings.monthlyIncome,
+        categoryBudgets: state.settings.categoryBudgets
+      }
+    };
+    const json = JSON.stringify(exportData, null, 2);
+    downloadFile(json, `budget-export-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+    setExportStatus('JSON exported!');
+    setTimeout(() => setExportStatus(''), 2000);
+  }, [state, downloadFile]);
+
+  const handleExportLLM = useCallback(() => {
+    const currency = state.settings.currency;
+    const now = new Date();
+    const currentMonth = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    // Calculate summaries
+    const thisMonthExpenses = state.expenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const totalMonthExpenses = thisMonthExpenses.reduce((s, e) => s + e.amount, 0);
+
+    const expensesByCategory: Record<string, number> = {};
+    thisMonthExpenses.forEach(e => {
+      expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + e.amount;
+    });
+
+    const totalInvested = state.investments.reduce((s, i) => s + i.amount, 0);
+    const totalCurrentValue = state.investments.reduce((s, i) => s + (i.currentValue || i.amount), 0);
+
+    const investmentsByCategory: Record<string, { invested: number; current: number }> = {};
+    state.investments.forEach(i => {
+      const cat = i.category || 'Uncategorized';
+      if (!investmentsByCategory[cat]) investmentsByCategory[cat] = { invested: 0, current: 0 };
+      investmentsByCategory[cat].invested += i.amount;
+      investmentsByCategory[cat].current += (i.currentValue || i.amount);
+    });
+
+    const totalGoalTarget = state.goals.reduce((s, g) => s + g.targetAmount, 0);
+    const totalGoalSaved = state.goals.reduce((s, g) => s + g.currentAmount, 0);
+
+    const allTimeExpenses = state.expenses.reduce((s, e) => s + e.amount, 0);
+    const allTimeIncome = state.incomes.reduce((s, i) => {
+      if (i.isRecurring && i.frequency === 'Monthly') return s + i.amount;
+      if (i.frequency === 'One-time') return s + i.amount;
+      return s;
+    }, 0);
+
+    let text = `# Personal Finance Summary\n`;
+    text += `Export Date: ${now.toLocaleDateString()}\nCurrency: ${currency}\n\n`;
+
+    // Income
+    text += `## Income Sources\n`;
+    state.incomes.forEach(i => {
+      text += `- ${i.name}: ${formatMoney(i.amount)} ${currency} (${i.frequency}${i.isRecurring ? ', recurring' : ''})\n`;
+    });
+    text += `\n`;
+
+    // This month expenses
+    text += `## Expenses - ${currentMonth}\n`;
+    text += `Total: ${formatMoney(totalMonthExpenses)} ${currency}\n\n`;
+    text += `By Category:\n`;
+    Object.entries(expensesByCategory)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([cat, amount]) => {
+        const pct = totalMonthExpenses > 0 ? ((amount / totalMonthExpenses) * 100).toFixed(1) : '0';
+        text += `- ${cat}: ${formatMoney(amount)} ${currency} (${pct}%)\n`;
+      });
+
+    // Budget limits
+    if (state.settings.categoryBudgets && Object.keys(state.settings.categoryBudgets).length > 0) {
+      text += `\nBudget Limits vs Actual:\n`;
+      Object.entries(state.settings.categoryBudgets).forEach(([cat, limit]) => {
+        const spent = expensesByCategory[cat] || 0;
+        const pct = ((spent / limit) * 100).toFixed(0);
+        text += `- ${cat}: ${formatMoney(spent)} / ${formatMoney(limit)} ${currency} (${pct}% used)\n`;
+      });
+    }
+    text += `\n`;
+
+    // All expenses (for historical analysis)
+    text += `## All Expense Records\n`;
+    text += `Total all-time expenses: ${formatMoney(allTimeExpenses)} ${currency}\n`;
+    text += `Total records: ${state.expenses.length}\n\n`;
+    state.expenses
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .forEach(e => {
+        text += `- ${new Date(e.date).toLocaleDateString()}: ${e.category} - ${formatMoney(e.amount)} ${currency}${e.note ? ` (${e.note})` : ''}${e.accountType ? ` [${e.accountType}]` : ''}\n`;
+      });
+    text += `\n`;
+
+    // Investments
+    text += `## Investment Portfolio\n`;
+    text += `Total Invested: ${formatMoney(totalInvested)} ${currency}\n`;
+    text += `Current Value: ${formatMoney(totalCurrentValue)} ${currency}\n`;
+    text += `Return: ${formatMoney(totalCurrentValue - totalInvested)} ${currency} (${totalInvested > 0 ? (((totalCurrentValue - totalInvested) / totalInvested) * 100).toFixed(1) : '0'}%)\n\n`;
+
+    text += `By Category:\n`;
+    Object.entries(investmentsByCategory).forEach(([cat, data]) => {
+      const ret = data.current - data.invested;
+      text += `- ${cat}: Invested ${formatMoney(data.invested)}, Current ${formatMoney(data.current)}, Return ${formatMoney(ret)} ${currency}\n`;
+    });
+
+    text += `\nDetailed Investments:\n`;
+    state.investments.forEach(i => {
+      text += `- ${i.name} (${i.category}): Invested ${formatMoney(i.amount)}, Current ${formatMoney(i.currentValue || i.amount)} ${currency} [${new Date(i.date).toLocaleDateString()}]${i.notes ? ` - ${i.notes}` : ''}\n`;
+    });
+    text += `\n`;
+
+    // Goals
+    text += `## Savings Goals\n`;
+    text += `Total Target: ${formatMoney(totalGoalTarget)} ${currency}\n`;
+    text += `Total Saved: ${formatMoney(totalGoalSaved)} ${currency}\n`;
+    text += `Progress: ${totalGoalTarget > 0 ? ((totalGoalSaved / totalGoalTarget) * 100).toFixed(1) : '0'}%\n\n`;
+    state.goals.forEach(g => {
+      const pct = g.targetAmount > 0 ? ((g.currentAmount / g.targetAmount) * 100).toFixed(1) : '0';
+      text += `- ${g.name}: ${formatMoney(g.currentAmount)} / ${formatMoney(g.targetAmount)} ${currency} (${pct}%)\n`;
+    });
+
+    downloadFile(text, `budget-summary-${new Date().toISOString().split('T')[0]}.txt`, 'text/plain');
+    setExportStatus('LLM summary exported!');
+    setTimeout(() => setExportStatus(''), 2000);
+  }, [state, formatMoney, downloadFile]);
+
+  const handleCopyLLM = useCallback(() => {
+    // Same content as handleExportLLM but copy to clipboard instead
+    const currency = state.settings.currency;
+    const now = new Date();
+    const currentMonth = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const thisMonthExpenses = state.expenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const totalMonthExpenses = thisMonthExpenses.reduce((s, e) => s + e.amount, 0);
+    const expensesByCategory: Record<string, number> = {};
+    thisMonthExpenses.forEach(e => {
+      expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + e.amount;
+    });
+    const totalInvested = state.investments.reduce((s, i) => s + i.amount, 0);
+    const totalCurrentValue = state.investments.reduce((s, i) => s + (i.currentValue || i.amount), 0);
+    const investmentsByCategory: Record<string, { invested: number; current: number }> = {};
+    state.investments.forEach(i => {
+      const cat = i.category || 'Uncategorized';
+      if (!investmentsByCategory[cat]) investmentsByCategory[cat] = { invested: 0, current: 0 };
+      investmentsByCategory[cat].invested += i.amount;
+      investmentsByCategory[cat].current += (i.currentValue || i.amount);
+    });
+    const totalGoalTarget = state.goals.reduce((s, g) => s + g.targetAmount, 0);
+    const totalGoalSaved = state.goals.reduce((s, g) => s + g.currentAmount, 0);
+    const allTimeExpenses = state.expenses.reduce((s, e) => s + e.amount, 0);
+
+    let text = `# Personal Finance Summary\n`;
+    text += `Export Date: ${now.toLocaleDateString()}\nCurrency: ${currency}\n\n`;
+    text += `## Income Sources\n`;
+    state.incomes.forEach(i => {
+      text += `- ${i.name}: ${formatMoney(i.amount)} ${currency} (${i.frequency}${i.isRecurring ? ', recurring' : ''})\n`;
+    });
+    text += `\n## Expenses - ${currentMonth}\nTotal: ${formatMoney(totalMonthExpenses)} ${currency}\n\nBy Category:\n`;
+    Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1]).forEach(([cat, amount]) => {
+      const pct = totalMonthExpenses > 0 ? ((amount / totalMonthExpenses) * 100).toFixed(1) : '0';
+      text += `- ${cat}: ${formatMoney(amount)} ${currency} (${pct}%)\n`;
+    });
+    if (state.settings.categoryBudgets && Object.keys(state.settings.categoryBudgets).length > 0) {
+      text += `\nBudget Limits vs Actual:\n`;
+      Object.entries(state.settings.categoryBudgets).forEach(([cat, limit]) => {
+        const spent = expensesByCategory[cat] || 0;
+        text += `- ${cat}: ${formatMoney(spent)} / ${formatMoney(limit)} ${currency} (${((spent / limit) * 100).toFixed(0)}% used)\n`;
+      });
+    }
+    text += `\n## All Expense Records\nTotal all-time: ${formatMoney(allTimeExpenses)} ${currency} | Records: ${state.expenses.length}\n\n`;
+    state.expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).forEach(e => {
+      text += `- ${new Date(e.date).toLocaleDateString()}: ${e.category} - ${formatMoney(e.amount)} ${currency}${e.note ? ` (${e.note})` : ''}${e.accountType ? ` [${e.accountType}]` : ''}\n`;
+    });
+    text += `\n## Investment Portfolio\nTotal Invested: ${formatMoney(totalInvested)} ${currency}\nCurrent Value: ${formatMoney(totalCurrentValue)} ${currency}\nReturn: ${formatMoney(totalCurrentValue - totalInvested)} ${currency} (${totalInvested > 0 ? (((totalCurrentValue - totalInvested) / totalInvested) * 100).toFixed(1) : '0'}%)\n\n`;
+    Object.entries(investmentsByCategory).forEach(([cat, data]) => {
+      text += `- ${cat}: Invested ${formatMoney(data.invested)}, Current ${formatMoney(data.current)} ${currency}\n`;
+    });
+    text += `\n## Savings Goals\nTotal: ${formatMoney(totalGoalSaved)} / ${formatMoney(totalGoalTarget)} ${currency} (${totalGoalTarget > 0 ? ((totalGoalSaved / totalGoalTarget) * 100).toFixed(1) : '0'}%)\n`;
+    state.goals.forEach(g => {
+      text += `- ${g.name}: ${formatMoney(g.currentAmount)} / ${formatMoney(g.targetAmount)} ${currency}\n`;
+    });
+
+    navigator.clipboard.writeText(text).then(() => {
+      setExportStatus('Copied to clipboard! Paste into ChatGPT or Claude.');
+      setTimeout(() => setExportStatus(''), 3000);
+    });
+  }, [state, formatMoney]);
 
   const handleLogout = async () => {
     try {
@@ -176,6 +384,41 @@ export default function Settings() {
                   Add
                 </button>
               </form>
+            </div>
+          </div>
+        </div>
+
+        {/* Export Data */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Export Data</h2>
+          <div className="card">
+            <div className="space-y-3">
+              <p className="text-sm text-gray-400">
+                Export your financial data to analyse with an LLM (ChatGPT, Claude) or keep as backup.
+              </p>
+              <button
+                onClick={handleCopyLLM}
+                className="w-full btn bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Copy Summary to Clipboard (for LLM)
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleExportLLM}
+                  className="flex-1 btn bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Download as Text
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="flex-1 btn bg-gray-600 hover:bg-gray-700 text-white"
+                >
+                  Download as JSON
+                </button>
+              </div>
+              {exportStatus && (
+                <p className="text-sm text-green-400 text-center">{exportStatus}</p>
+              )}
             </div>
           </div>
         </div>
