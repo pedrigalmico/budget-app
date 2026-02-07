@@ -22,6 +22,19 @@ export type Category = {
   isCustom?: boolean;
 };
 
+export const INVESTMENT_CATEGORIES = [
+  'Stocks',
+  'Bonds',
+  'Real Estate / REITs',
+  'Cryptocurrency',
+  'Mutual Funds',
+  'ETFs',
+  'Savings / Fixed Deposit',
+  'Gold / Commodities',
+  'Business',
+  'Other'
+];
+
 export function createCategory(name: string): Category {
   return {
     id: crypto.randomUUID(),

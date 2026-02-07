@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Investment } from '../types';
+import { INVESTMENT_CATEGORIES } from '../config/categories';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 
 export default function Investments() {
@@ -17,8 +18,9 @@ export default function Investments() {
       id: editingInvestment?.id || crypto.randomUUID(),
       name: formData.get('name') as string,
       amount: parseFloat(formData.get('amount') as string),
-      currentValue: formData.get('currentValue') ? 
+      currentValue: formData.get('currentValue') ?
         parseFloat(formData.get('currentValue') as string) : undefined,
+      category: formData.get('category') as string,
       notes: formData.get('notes') as string || undefined,
       date: editingInvestment?.date || new Date().toISOString()
     };
@@ -93,6 +95,24 @@ export default function Investments() {
                 className="input mt-1"
                 defaultValue={editingInvestment?.name}
               />
+            </div>
+
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium mb-1">
+                Category
+              </label>
+              <select
+                name="category"
+                id="category"
+                required
+                className="input mt-1"
+                defaultValue={editingInvestment?.category || ''}
+              >
+                <option value="" disabled>Select a category</option>
+                {INVESTMENT_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -176,6 +196,7 @@ export default function Investments() {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-medium dark:text-white">{investment.name}</h3>
+                  <div className="text-xs text-blue-400">{investment.category}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     Started {new Date(investment.date).toLocaleDateString()}
                   </div>

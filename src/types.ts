@@ -14,6 +14,7 @@ export interface Investment {
   name: string;
   amount: number;
   currentValue?: number;
+  category: string;
   notes?: string;
   date: string;
 }
