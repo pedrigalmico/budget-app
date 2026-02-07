@@ -40,6 +40,7 @@ export interface Settings {
   darkMode: boolean;
   customCategories: Category[];
   disabledDefaultCategories?: string[];
+  categoryBudgets?: Record<string, number>;
 }
 
 export type IncomeType = 'Salary' | 'Freelance' | 'Investment' | 'Business' | 'Other';

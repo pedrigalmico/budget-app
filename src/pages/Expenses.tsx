@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Expense as ExpenseType } from '../types';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import { DEFAULT_CATEGORIES } from '../config/categories';
 
 export default function Expenses() {
-  const { state, addExpense, updateExpense, deleteExpense, formatMoney } = useAppState();
+  const { state, addExpense, updateExpense, deleteExpense, updateSettings, formatMoney } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [editingExpense, setEditingExpense] = useState<ExpenseType | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingBudgets, setEditingBudgets] = useState(false);
 
   // Combine default and custom categories, filtering out disabled default categories
   const allCategories = [
@@ -41,6 +42,30 @@ export default function Expenses() {
 
   // Calculate total expenses for selected month
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  // Calculate spending per category for selected month (always uses full month, ignoring category filter)
+  const monthlyExpenses = state.expenses.filter((expense: ExpenseType) =>
+    expense.date.startsWith(selectedMonth)
+  );
+  const spendingByCategory = useMemo(() => {
+    return monthlyExpenses.reduce((acc: Record<string, number>, expense: ExpenseType) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [monthlyExpenses]);
+
+  const categoryBudgets = state.settings.categoryBudgets || {};
+
+  const handleBudgetSave = (category: string, value: string) => {
+    const amount = parseFloat(value);
+    const newBudgets = { ...categoryBudgets };
+    if (!amount || amount <= 0) {
+      delete newBudgets[category];
+    } else {
+      newBudgets[category] = amount;
+    }
+    updateSettings({ ...state.settings, categoryBudgets: newBudgets });
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -257,12 +282,107 @@ export default function Expenses() {
         </select>
       </div>
 
-      {/* Monthly Total Card */}
+      {/* Monthly Total Card with Budget Limits */}
       <div className="card">
         <h2 className="text-lg text-gray-400">Total Expenses for {new Date(selectedMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
-        <div className="text-3xl font-bold text-red-500">
+        <div className="text-3xl font-bold text-red-500 mb-4">
           {state.settings.currency} {formatMoney(totalExpenses)}
         </div>
+
+        {/* Category Budget Limits */}
+        {Object.keys(categoryBudgets).length > 0 && !editingBudgets && (
+          <div className="border-t border-gray-700 pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-medium text-gray-400">Category Budgets</h3>
+              <button
+                onClick={() => setEditingBudgets(true)}
+                className="text-xs text-blue-400 hover:text-blue-300"
+              >
+                Edit Limits
+              </button>
+            </div>
+            <div className="space-y-3">
+              {Object.entries(categoryBudgets).map(([category, limit]) => {
+                const spent = spendingByCategory[category] || 0;
+                const percentage = limit > 0 ? (spent / limit) * 100 : 0;
+                const isOver = percentage > 100;
+                const isWarning = percentage >= 75 && percentage <= 100;
+
+                return (
+                  <div key={category}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm text-gray-300">{category}</span>
+                      <span className="text-sm text-gray-400">
+                        {state.settings.currency} {formatMoney(spent)} / {formatMoney(limit)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2.5">
+                      <div
+                        className={`h-2.5 rounded-full transition-all ${
+                          isOver ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center mt-0.5">
+                      <span className={`text-xs ${
+                        isOver ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-green-400'
+                      }`}>
+                        {percentage.toFixed(0)}%{isOver ? ' - Over budget!' : isWarning ? ' - Almost at limit' : ''}
+                      </span>
+                      {isOver && (
+                        <span className="text-xs text-red-400">
+                          +{state.settings.currency} {formatMoney(spent - limit)} over
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Edit Budget Limits */}
+        {editingBudgets && (
+          <div className="border-t border-gray-700 pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-medium text-gray-400">Set Category Budgets</h3>
+              <button
+                onClick={() => setEditingBudgets(false)}
+                className="text-xs text-blue-400 hover:text-blue-300"
+              >
+                Done
+              </button>
+            </div>
+            <div className="space-y-2">
+              {allCategories.map(category => (
+                <div key={category} className="flex items-center gap-3">
+                  <span className="text-sm text-gray-300 w-40 shrink-0">{category}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="No limit"
+                    className="input text-sm flex-1"
+                    defaultValue={categoryBudgets[category] || ''}
+                    onBlur={(e) => handleBudgetSave(category, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Show "Set Budgets" button if no budgets yet */}
+        {Object.keys(categoryBudgets).length === 0 && !editingBudgets && (
+          <button
+            onClick={() => setEditingBudgets(true)}
+            className="text-sm text-blue-400 hover:text-blue-300 mt-2"
+          >
+            + Set category budget limits
+          </button>
+        )}
       </div>
 
       {/* Expenses List */}

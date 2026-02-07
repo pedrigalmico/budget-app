@@ -15,7 +15,8 @@ export const useAppState = () => {
       monthlyIncome: 0,
       currency: 'SAR',
       darkMode: false,
-      customCategories: []
+      customCategories: [],
+      categoryBudgets: {}
     }
   }));
   
@@ -140,7 +141,8 @@ export const useAppState = () => {
       monthlyIncome: 0,
       currency: 'SAR',
       darkMode: false,
-      customCategories: []
+      customCategories: [],
+      categoryBudgets: {}
     }
   };
 

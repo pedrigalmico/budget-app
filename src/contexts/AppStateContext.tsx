@@ -38,7 +38,8 @@ const initialState: AppState = {
     currency: 'SAR',
     darkMode: true,
     customCategories: [],
-    disabledDefaultCategories: []
+    disabledDefaultCategories: [],
+    categoryBudgets: {}
   },
   incomes: []
 };
