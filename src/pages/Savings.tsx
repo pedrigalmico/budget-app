@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { Income, Expense, Goal, Contribution } from '../types';
+import { Income, Expense } from '../types';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -38,7 +38,6 @@ export default function Savings() {
     const allYears = [
       ...state.incomes.map((i: Income) => new Date(i.date).getFullYear()),
       ...state.expenses.map((e: Expense) => new Date(e.date).getFullYear()),
-      ...state.goals.flatMap((g: Goal) => (g.contributions || []).map((c: Contribution) => new Date(c.date).getFullYear())),
     ];
     return Array.from(new Set(allYears)).sort();
   }, [state]);
@@ -56,10 +55,7 @@ export default function Savings() {
         const expenses = state.expenses.filter(
           (exp: Expense) => new Date(exp.date).getFullYear() === year
         ).reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
-        const contributions = state.goals.flatMap((g: Goal) => g.contributions || []).filter(
-          (c: Contribution) => new Date(c.date).getFullYear() === year
-        ).reduce((sum: number, c: Contribution) => sum + c.amount, 0);
-        return income - expenses - contributions;
+        return income - expenses;
       });
     } else if (period === 'Custom') {
       // Show savings for each month in custom range
@@ -78,10 +74,7 @@ export default function Savings() {
         const expenses = state.expenses.filter(
           (exp: Expense) => new Date(exp.date).getFullYear() === year && new Date(exp.date).getMonth() === month
         ).reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
-        const contributions = state.goals.flatMap((g: Goal) => g.contributions || []).filter(
-          (c: Contribution) => new Date(c.date).getFullYear() === year && new Date(c.date).getMonth() === month
-        ).reduce((sum: number, c: Contribution) => sum + c.amount, 0);
-        return income - expenses - contributions;
+        return income - expenses;
       });
     } else {
       // YTD: savings for each month up to now in current year
@@ -95,10 +88,7 @@ export default function Savings() {
         const expenses = state.expenses.filter(
           (exp: Expense) => new Date(exp.date).getFullYear() === year && new Date(exp.date).getMonth() === month
         ).reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
-        const contributions = state.goals.flatMap((g: Goal) => g.contributions || []).filter(
-          (c: Contribution) => new Date(c.date).getFullYear() === year && new Date(c.date).getMonth() === month
-        ).reduce((sum: number, c: Contribution) => sum + c.amount, 0);
-        return income - expenses - contributions;
+        return income - expenses;
       });
     }
   }, [period, state, months, years, now, customFrom, customTo]);
@@ -130,11 +120,7 @@ export default function Savings() {
     const d = new Date(exp.date);
     return d.getFullYear() === year && d.getMonth() + 1 === month;
   }).reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
-  const totalContributions = state.goals.flatMap((g: Goal) => g.contributions || []).filter((c: Contribution) => {
-    const d = new Date(c.date);
-    return d.getFullYear() === year && d.getMonth() + 1 === month;
-  }).reduce((sum: number, c: Contribution) => sum + c.amount, 0);
-  const totalSavings = totalIncome - totalExpenses - totalContributions;
+  const totalSavings = totalIncome - totalExpenses;
 
   // Calculate total savings for YTD, Year, Custom
   let rangeLabel = '';
@@ -150,18 +136,13 @@ export default function Savings() {
       const d = new Date(exp.date);
       return d.getFullYear() === y && d.getMonth() <= m;
     });
-    const contributions = state.goals.flatMap((g: Goal) => g.contributions || []).filter((c: Contribution) => {
-      const d = new Date(c.date);
-      return d.getFullYear() === y && d.getMonth() <= m;
-    });
-    rangeTotal = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0) - expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0) - contributions.reduce((sum: number, c: Contribution) => sum + c.amount, 0);
+    rangeTotal = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0) - expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
     rangeLabel = `Total Savings for Jan–${now.toLocaleString('default', { month: 'short' })} ${y}`;
   } else if (period === 'Year') {
     const y = now.getFullYear();
     const incomes = state.incomes.filter((inc: Income) => new Date(inc.date).getFullYear() === y);
     const expenses = state.expenses.filter((exp: Expense) => new Date(exp.date).getFullYear() === y);
-    const contributions = state.goals.flatMap((g: Goal) => g.contributions || []).filter((c: Contribution) => new Date(c.date).getFullYear() === y);
-    rangeTotal = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0) - expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0) - contributions.reduce((sum: number, c: Contribution) => sum + c.amount, 0);
+    rangeTotal = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0) - expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
     rangeLabel = `Total Savings for ${y}`;
   } else if (period === 'Custom') {
     const from = new Date(customFrom + '-01');
@@ -174,11 +155,7 @@ export default function Savings() {
       const d = new Date(exp.date);
       return d >= from && d <= to;
     });
-    const contributions = state.goals.flatMap((g: Goal) => g.contributions || []).filter((c: Contribution) => {
-      const d = new Date(c.date);
-      return d >= from && d <= to;
-    });
-    rangeTotal = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0) - expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0) - contributions.reduce((sum: number, c: Contribution) => sum + c.amount, 0);
+    rangeTotal = incomes.reduce((sum: number, i: Income) => sum + i.amount, 0) - expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
     rangeLabel = `Total Savings for Custom Range`;
   }
 
