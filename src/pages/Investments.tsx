@@ -22,7 +22,7 @@ export default function Investments() {
         parseFloat(formData.get('currentValue') as string) : undefined,
       category: formData.get('category') as string,
       notes: formData.get('notes') as string || undefined,
-      date: editingInvestment?.date || new Date().toISOString()
+      date: new Date(formData.get('date') as string).toISOString()
     };
 
     if (editingInvestment) {
@@ -143,6 +143,20 @@ export default function Investments() {
                 step="0.01"
                 className="input mt-1"
                 defaultValue={editingInvestment?.currentValue}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="date" className="block text-sm font-medium mb-1">
+                Investment Date
+              </label>
+              <input
+                type="date"
+                name="date"
+                id="date"
+                required
+                className="input mt-1"
+                defaultValue={editingInvestment?.date ? new Date(editingInvestment.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
               />
             </div>
 
