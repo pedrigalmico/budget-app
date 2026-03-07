@@ -35,6 +35,19 @@ export const INVESTMENT_CATEGORIES = [
   'Other'
 ];
 
+export const UNIT_TYPES: Record<string, string> = {
+  'Stocks': 'shares',
+  'Bonds': 'units',
+  'Real Estate / REITs': 'units',
+  'Cryptocurrency': 'coins',
+  'Mutual Funds': 'units',
+  'ETFs': 'shares',
+  'Savings / Fixed Deposit': 'units',
+  'Gold / Commodities': 'grams',
+  'Business': 'units',
+  'Other': 'units'
+};
+
 export function createCategory(name: string): Category {
   return {
     id: crypto.randomUUID(),

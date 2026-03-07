@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { AppState, Expense, Goal, Investment, Settings, Income } from '../types';
+import { AppState, Expense, Goal, InvestmentLot, Settings, Income, PriceCache } from '../types';
 import { useFirestore } from './useFirestore';
 import { useLoading } from '../contexts/LoadingContext';
 
@@ -19,7 +19,7 @@ export const useAppState = () => {
       categoryBudgets: {}
     }
   }));
-  
+
   const pendingUpdates = useRef<NodeJS.Timeout | null>(null);
   const pendingData = useRef<AppState | null>(null);
 
@@ -34,7 +34,7 @@ export const useAppState = () => {
   const updateState = useCallback((newState: AppState) => {
     // Update local state immediately
     setState(newState);
-    
+
     // Store the pending data
     pendingData.current = newState;
 
@@ -56,7 +56,7 @@ export const useAppState = () => {
         setIsLoading(false);
         pendingData.current = null;
       }
-    }, 2000); // 3 seconds delay
+    }, 2000);
   }, [updateData, setIsLoading]);
 
   // Cleanup on unmount
@@ -77,32 +77,30 @@ export const useAppState = () => {
 
     return incomes.reduce((total, income) => {
       const incomeDate = new Date(income.date);
-      
-      // Include all recurring monthly incomes
+
       if (income.isRecurring && income.frequency === 'Monthly') {
         return total + income.amount;
       }
-      
-      // Include one-time incomes that fall within this month
-      if (income.frequency === 'One-time' && 
-          incomeDate >= startOfMonth && 
+
+      if (income.frequency === 'One-time' &&
+          incomeDate >= startOfMonth &&
           incomeDate <= endOfMonth) {
         return total + income.amount;
       }
-      
-      // Include weekly incomes for this month
+
       if (income.frequency === 'Weekly' && income.isRecurring) {
         return total + (income.amount * 4);
       }
-      
-      // Include proportional yearly income for this month
+
       if (income.frequency === 'Yearly' && income.isRecurring) {
         return total + (income.amount / 12);
       }
-      
+
       return total;
     }, 0);
   };
+
+  // ── Expenses ──────────────────────────────────────────────────────
 
   const addExpense = (expense: Expense) => {
     updateState({
@@ -111,6 +109,28 @@ export const useAppState = () => {
     });
   };
 
+  const updateExpense = (updatedExpense: Expense) => {
+    updateState({
+      ...state,
+      expenses: state.expenses.map(expense =>
+        expense.id === updatedExpense.id ? updatedExpense : expense
+      )
+    });
+  };
+
+  const deleteExpense = (expenseId: string) => {
+    try {
+      updateState({
+        ...state,
+        expenses: state.expenses.filter(expense => expense.id !== expenseId)
+      });
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+    }
+  };
+
+  // ── Goals ─────────────────────────────────────────────────────────
+
   const addGoal = (goal: Goal) => {
     updateState({
       ...state,
@@ -118,12 +138,103 @@ export const useAppState = () => {
     });
   };
 
-  const addInvestment = (investment: Investment) => {
+  const updateGoal = (updatedGoal: Goal) => {
     updateState({
       ...state,
-      investments: [...state.investments, investment]
+      goals: state.goals.map(goal =>
+        goal.id === updatedGoal.id ? updatedGoal : goal
+      )
     });
   };
+
+  const deleteGoal = (goalId: string) => {
+    try {
+      updateState({
+        ...state,
+        goals: state.goals.filter(goal => goal.id !== goalId)
+      });
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+    }
+  };
+
+  // ── Investments (lot-based) ───────────────────────────────────────
+
+  const addInvestmentLot = (lot: InvestmentLot) => {
+    updateState({
+      ...state,
+      investments: [...state.investments, lot]
+    });
+  };
+
+  const updateInvestmentLot = (updatedLot: InvestmentLot) => {
+    updateState({
+      ...state,
+      investments: state.investments.map(lot =>
+        lot.id === updatedLot.id ? updatedLot : lot
+      )
+    });
+  };
+
+  const deleteInvestmentLot = (lotId: string) => {
+    try {
+      updateState({
+        ...state,
+        investments: state.investments.filter(lot => lot.id !== lotId)
+      });
+    } catch (error) {
+      console.error('Error deleting investment lot:', error);
+    }
+  };
+
+  const deletePosition = (positionKey: string) => {
+    try {
+      updateState({
+        ...state,
+        investments: state.investments.filter(lot => lot.positionKey !== positionKey)
+      });
+    } catch (error) {
+      console.error('Error deleting position:', error);
+    }
+  };
+
+  const updatePriceCache = (priceCache: PriceCache) => {
+    updateState({
+      ...state,
+      priceCache
+    });
+  };
+
+  // ── Income ────────────────────────────────────────────────────────
+
+  const addIncome = (income: Income) => {
+    updateState({
+      ...state,
+      incomes: [...state.incomes, income]
+    });
+  };
+
+  const updateIncome = (updatedIncome: Income) => {
+    updateState({
+      ...state,
+      incomes: state.incomes.map(income =>
+        income.id === updatedIncome.id ? updatedIncome : income
+      )
+    });
+  };
+
+  const deleteIncome = (incomeId: string) => {
+    try {
+      updateState({
+        ...state,
+        incomes: state.incomes.filter(income => income.id !== incomeId)
+      });
+    } catch (error) {
+      console.error('Error deleting income:', error);
+    }
+  };
+
+  // ── Settings ──────────────────────────────────────────────────────
 
   const updateSettings = (settings: Settings) => {
     updateState({
@@ -147,9 +258,11 @@ export const useAppState = () => {
   };
 
   const clearData = () => {
-    updateData(defaultState); // Update Firestore with empty state
-    setState(defaultState); // Reset local state to default values
+    updateData(defaultState);
+    setState(defaultState);
   };
+
+  // ── Derived values ────────────────────────────────────────────────
 
   const getAvailableBalance = () => {
     const currentMonthIncome = calculateCurrentMonthIncome(state.incomes);
@@ -160,111 +273,21 @@ export const useAppState = () => {
   const getMonthlySpending = () => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
-    
+
     return state.expenses
       .filter(expense => {
         const expenseDate = new Date(expense.date);
-        return expenseDate.getMonth() === currentMonth && 
+        return expenseDate.getMonth() === currentMonth &&
                expenseDate.getFullYear() === currentYear;
       })
       .reduce((sum, expense) => sum + expense.amount, 0);
   };
 
-  const updateGoal = (updatedGoal: Goal) => {
-    updateState({
-      ...state,
-      goals: state.goals.map(goal => 
-        goal.id === updatedGoal.id ? updatedGoal : goal
-      )
-    });
-  };
+  // ── Formatting ────────────────────────────────────────────────────
 
-  const updateExpense = (updatedExpense: Expense) => {
-    updateState({
-      ...state,
-      expenses: state.expenses.map(expense => 
-        expense.id === updatedExpense.id ? updatedExpense : expense
-      )
-    });
-  };
-
-  const deleteExpense = (expenseId: string) => {
-    try {
-      const updatedExpenses = state.expenses.filter(expense => expense.id !== expenseId);
-      updateState({
-        ...state,
-        expenses: updatedExpenses
-      });
-    } catch (error) {
-      console.error('Error deleting expense:', error);
-      // Optionally show an error message to the user
-    }
-  };
-
-  const updateInvestment = (updatedInvestment: Investment) => {
-    updateState({
-      ...state,
-      investments: state.investments.map(investment => 
-        investment.id === updatedInvestment.id ? updatedInvestment : investment
-      )
-    });
-  };
-
-  const addIncome = (income: Income) => {
-    updateState({
-      ...state,
-      incomes: [...state.incomes, income]
-    });
-  };
-
-  const updateIncome = (updatedIncome: Income) => {
-    updateState({
-      ...state,
-      incomes: state.incomes.map(income => 
-        income.id === updatedIncome.id ? updatedIncome : income
-      )
-    });
-  };
-
-  const deleteIncome = (incomeId: string) => {
-    try {
-      const updatedIncomes = state.incomes.filter(income => income.id !== incomeId);
-      updateState({
-        ...state,
-        incomes: updatedIncomes
-      });
-    } catch (error) {
-      console.error('Error deleting income:', error);
-    }
-  };
-
-  const deleteGoal = (goalId: string) => {
-    try {
-      const updatedGoals = state.goals.filter(goal => goal.id !== goalId);
-      updateState({
-        ...state,
-        goals: updatedGoals
-      });
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-    }
-  };
-
-  const deleteInvestment = (investmentId: string) => {
-    try {
-      const updatedInvestments = state.investments.filter(investment => investment.id !== investmentId);
-      updateState({
-        ...state,
-        investments: updatedInvestments
-      });
-    } catch (error) {
-      console.error('Error deleting investment:', error);
-    }
-  };
-
-  // Add a helper function for number formatting
   const formatMoney = (amount: number): string => {
-    return amount.toLocaleString('en-US', {
+    const safeAmount = isNaN(amount) || !isFinite(amount) ? 0 : amount;
+    return safeAmount.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
@@ -272,23 +295,31 @@ export const useAppState = () => {
 
   return {
     state,
+    // Expenses
     addExpense,
     updateExpense,
+    deleteExpense,
+    // Goals
     addGoal,
-    addInvestment,
-    updateSettings,
-    clearData,
-    getAvailableBalance,
-    getMonthlySpending,
     updateGoal,
-    updateInvestment,
+    deleteGoal,
+    // Investments (lot-based)
+    addInvestmentLot,
+    updateInvestmentLot,
+    deleteInvestmentLot,
+    deletePosition,
+    updatePriceCache,
+    // Income
     addIncome,
     updateIncome,
-    formatMoney,
-    calculateCurrentMonthIncome,
-    deleteExpense,
     deleteIncome,
-    deleteGoal,
-    deleteInvestment
+    // Settings
+    updateSettings,
+    clearData,
+    // Derived
+    getAvailableBalance,
+    getMonthlySpending,
+    calculateCurrentMonthIncome,
+    formatMoney,
   };
-}; 
+};

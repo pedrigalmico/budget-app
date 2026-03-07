@@ -19,7 +19,7 @@ const PERIODS = ['Month', 'YTD', 'Year', 'Custom'] as const;
 type Period = typeof PERIODS[number];
 
 export default function Savings() {
-  const { state } = useAppState();
+  const { state, formatMoney } = useAppState();
   const [period, setPeriod] = useState<Period>('YTD');
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
@@ -217,13 +217,13 @@ export default function Savings() {
         {(period === 'Month') && (
           <div className="card mb-4">
             <h2 className="text-lg text-gray-400">Total Savings for {new Date(selectedMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
-            <div className={`text-3xl font-bold ${totalSavings >= 0 ? 'text-green-500' : 'text-red-500'}`}>SAR {totalSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className={`text-3xl font-bold ${totalSavings >= 0 ? 'text-green-500' : 'text-red-500'}`}>{state.settings.currency} {formatMoney(totalSavings)}</div>
           </div>
         )}
         {(period === 'YTD' || period === 'Year' || period === 'Custom') && (
           <div className="card mb-4">
             <h2 className="text-lg text-gray-400">{rangeLabel}</h2>
-            <div className={`text-3xl font-bold ${rangeTotal >= 0 ? 'text-green-500' : 'text-red-500'}`}>SAR {rangeTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className={`text-3xl font-bold ${rangeTotal >= 0 ? 'text-green-500' : 'text-red-500'}`}>{state.settings.currency} {formatMoney(rangeTotal)}</div>
           </div>
         )}
         {/* Graph for YTD, Year, Custom */}

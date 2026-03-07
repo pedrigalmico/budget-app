@@ -56,7 +56,7 @@ const calculateCurrentMonthIncome = (incomes: IncomeType[]): number => {
 };
 
 export default function Income() {
-  const { state, addIncome, updateIncome, deleteIncome } = useAppState();
+  const { state, addIncome, updateIncome, deleteIncome, formatMoney } = useAppState();
   const [showForm, setShowForm] = useState(false);
   const [editingIncome, setEditingIncome] = useState<IncomeType | null>(null);
 
@@ -124,13 +124,13 @@ export default function Income() {
             <div>
               <div className="text-sm text-gray-400">Monthly Recurring</div>
               <div className="text-2xl font-bold text-green-500">
-                {state.settings.currency} {calculateMonthlyIncome(state.incomes)}
+                {state.settings.currency} {formatMoney(calculateMonthlyIncome(state.incomes))}
               </div>
             </div>
             <div>
               <div className="text-sm text-gray-400">This Month's Total</div>
               <div className="text-2xl font-bold text-blue-500">
-                {state.settings.currency} {calculateCurrentMonthIncome(state.incomes)}
+                {state.settings.currency} {formatMoney(calculateCurrentMonthIncome(state.incomes))}
               </div>
             </div>
           </div>
@@ -281,7 +281,7 @@ export default function Income() {
                 <div className="flex items-start gap-4">
                   <div className="text-right">
                     <div className="font-semibold text-green-500">
-                      {state.settings.currency} {income.amount.toFixed(2)}
+                      {state.settings.currency} {formatMoney(income.amount)}
                     </div>
                     <div className="text-sm text-gray-400">
                       {new Date(income.date).toLocaleDateString()}

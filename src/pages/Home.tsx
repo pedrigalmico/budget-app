@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } f
 import { FaMoneyBillWave, FaChartLine, FaPiggyBank, FaWallet, FaBullseye, FaArrowRight } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { groupLotsIntoPositions } from '../utils/investmentUtils';
 
 type ViewType = 'month' | 'ytd' | 'year';
 type Category = 'income' | 'expenses' | 'investments' | 'goals';
@@ -69,8 +70,9 @@ export default function Home() {
   }, [state.expenses, selectedMonth, selectedYear]);
 
   const totalInvestments = useMemo(() => {
-    return state.investments.reduce((sum, investment) => sum + (investment.currentValue || investment.amount), 0);
-  }, [state.investments]);
+    const positions = groupLotsIntoPositions(state.investments, state.priceCache);
+    return positions.reduce((sum, pos) => sum + (pos.currentValue ?? pos.totalInvested), 0);
+  }, [state.investments, state.priceCache]);
 
   const totalGoals = useMemo(() => {
     return state.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
@@ -107,7 +109,7 @@ export default function Home() {
 
         const dayInvestments = state.investments
           .filter(inv => inv.date.startsWith(dayStr))
-          .reduce((sum, inv) => sum + (inv.currentValue || inv.amount), 0);
+          .reduce((sum, inv) => sum + (Number(inv.quantity) || 0) * (Number(inv.pricePerUnit) || 0), 0);
 
         const dayGoals = state.goals
           .filter(goal => goal.date.startsWith(dayStr))
@@ -139,7 +141,7 @@ export default function Home() {
 
         const monthInvestments = state.investments
           .filter(inv => inv.date.startsWith(monthPrefix))
-          .reduce((sum, inv) => sum + (inv.currentValue || inv.amount), 0);
+          .reduce((sum, inv) => sum + (Number(inv.quantity) || 0) * (Number(inv.pricePerUnit) || 0), 0);
 
         const monthGoals = state.goals
           .filter(goal => goal.date.startsWith(monthPrefix))
@@ -200,9 +202,10 @@ export default function Home() {
     }
 
     // Investment growth/decline
-    const totalInvestmentGrowth = state.investments.reduce((sum, investment) => {
-      if (investment.currentValue && investment.amount) {
-        return sum + (investment.currentValue - investment.amount);
+    const investmentPositions = groupLotsIntoPositions(state.investments, state.priceCache);
+    const totalInvestmentGrowth = investmentPositions.reduce((sum, pos) => {
+      if (pos.returnAmount !== undefined) {
+        return sum + pos.returnAmount;
       }
       return sum;
     }, 0);

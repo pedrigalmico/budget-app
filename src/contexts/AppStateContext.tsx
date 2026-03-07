@@ -1,5 +1,5 @@
 import React, { createContext, useReducer } from 'react';
-import type { AppState, Expense, Goal, Investment, Settings, Income } from '../types';
+import type { AppState, Expense, Goal, InvestmentLot, Settings, Income } from '../types';
 
 interface AppStateContextType {
   state: AppState;
@@ -7,7 +7,7 @@ interface AppStateContextType {
   addExpense: (expense: Expense) => void;
   updateExpense: (updatedExpense: Expense) => void;
   addGoal: (goal: Goal) => void;
-  addInvestment: (investment: Investment) => void;
+  addInvestment: (investment: InvestmentLot) => void;
   updateSettings: (settings: Settings) => void;
   clearData: () => void;
   formatMoney: (amount: number) => string;
@@ -22,7 +22,7 @@ type Action =
   | { type: 'ADD_EXPENSE'; payload: Expense }
   | { type: 'UPDATE_EXPENSE'; payload: Expense }
   | { type: 'ADD_GOAL'; payload: Goal }
-  | { type: 'ADD_INVESTMENT'; payload: Investment }
+  | { type: 'ADD_INVESTMENT'; payload: InvestmentLot }
   | { type: 'UPDATE_SETTINGS'; payload: Settings }
   | { type: 'CLEAR_DATA' }
   | { type: 'ADD_INCOME'; payload: Income }
@@ -120,7 +120,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'ADD_GOAL', payload: goal });
   };
 
-  const addInvestment = (investment: Investment) => {
+  const addInvestment = (investment: InvestmentLot) => {
     dispatch({ type: 'ADD_INVESTMENT', payload: investment });
   };
 

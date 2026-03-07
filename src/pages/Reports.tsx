@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { Income, Investment } from '../types';
+import { Income } from '../types';
+import { groupLotsIntoPositions } from '../utils/investmentUtils';
 
 const COLORS = [
   '#3B82F6', // blue
@@ -66,7 +67,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 type ReportTab = 'expenses' | 'investments';
 
 export default function Reports() {
-  const { state } = useAppState();
+  const { state, formatMoney } = useAppState();
   const now = new Date();
   const [activeTab, setActiveTab] = useState<ReportTab>('expenses');
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
@@ -137,31 +138,36 @@ export default function Reports() {
       .sort((a, b) => b.value - a.value); // Sort by value in descending order
   }, [state.expenses, selectedMonth, selectedYear, monthlyExpenses]);
 
+  // Compute positions from lots
+  const positions = useMemo(() => {
+    return groupLotsIntoPositions(state.investments, state.priceCache);
+  }, [state.investments, state.priceCache]);
+
   // Investment calculations
   const totalInvested = useMemo(() => {
-    return state.investments.reduce((total: number, inv: Investment) => total + inv.amount, 0);
-  }, [state.investments]);
+    return positions.reduce((sum, pos) => sum + pos.totalInvested, 0);
+  }, [positions]);
 
   const totalCurrentValue = useMemo(() => {
-    return state.investments.reduce((total: number, inv: Investment) => total + (inv.currentValue || inv.amount), 0);
-  }, [state.investments]);
+    return positions.reduce((sum, pos) => sum + (pos.currentValue ?? pos.totalInvested), 0);
+  }, [positions]);
 
   const totalReturn = totalCurrentValue - totalInvested;
   const totalReturnPercentage = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
 
   // Investment data grouped by category for pie chart
   const investmentCategoryData = useMemo(() => {
-    const categoryInvestments = state.investments.reduce((acc: Record<string, { invested: number; currentValue: number }>, inv: Investment) => {
-      const category = inv.category || 'Uncategorized';
-      if (!acc[category]) {
-        acc[category] = { invested: 0, currentValue: 0 };
-      }
-      acc[category].invested += inv.amount;
-      acc[category].currentValue += inv.currentValue || inv.amount;
-      return acc;
-    }, {} as Record<string, { invested: number; currentValue: number }>);
+    const categoryMap: Record<string, { invested: number; currentValue: number }> = {};
 
-    return Object.entries(categoryInvestments)
+    for (const pos of positions) {
+      if (!categoryMap[pos.category]) {
+        categoryMap[pos.category] = { invested: 0, currentValue: 0 };
+      }
+      categoryMap[pos.category].invested += pos.totalInvested;
+      categoryMap[pos.category].currentValue += pos.currentValue ?? pos.totalInvested;
+    }
+
+    return Object.entries(categoryMap)
       .map(([name, data]) => ({
         name,
         value: data.currentValue,
@@ -171,7 +177,7 @@ export default function Reports() {
         percentage: totalCurrentValue > 0 ? (data.currentValue / totalCurrentValue) * 100 : 0
       }))
       .sort((a, b) => b.value - a.value);
-  }, [state.investments, totalCurrentValue]);
+  }, [positions, totalCurrentValue]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -233,16 +239,16 @@ export default function Reports() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Monthly Income</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(monthlyIncome)}</p>
+                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(monthlyIncome)}</p>
                 </div>
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Monthly Expenses</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(monthlyExpenses)}</p>
+                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(monthlyExpenses)}</p>
                 </div>
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Remaining Budget</h3>
                   <p className={`text-sm font-bold ${remainingBudget < 0 ? 'text-red-500' : 'text-gray-100'}`}>
-                    {state.settings.currency}{formatNumber(remainingBudget)}
+                    {state.settings.currency} {formatMoney(remainingBudget)}
                   </p>
                 </div>
                 <div className="bg-gray-800 p-3 rounded-lg">
@@ -302,7 +308,7 @@ export default function Reports() {
                         <span className="text-gray-300 text-sm">{category.name}</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-gray-100 text-sm">{state.settings.currency}{formatNumber(category.value)}</div>
+                        <div className="font-medium text-gray-100 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
                         <div className="text-xs text-gray-400">{category.percentage.toFixed(1)}%</div>
                       </div>
                     </div>
@@ -322,16 +328,16 @@ export default function Reports() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Total Invested</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(totalInvested)}</p>
+                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(totalInvested)}</p>
                 </div>
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Current Value</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency}{formatNumber(totalCurrentValue)}</p>
+                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(totalCurrentValue)}</p>
                 </div>
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Total Return</h3>
                   <p className={`text-sm font-bold ${totalReturn < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {totalReturn >= 0 ? '+' : ''}{state.settings.currency}{formatNumber(totalReturn)}
+                    {totalReturn >= 0 ? '+' : ''}{state.settings.currency} {formatMoney(totalReturn)}
                   </p>
                 </div>
                 <div className="bg-gray-800 p-3 rounded-lg">
@@ -373,7 +379,7 @@ export default function Reports() {
                           contentStyle={{ backgroundColor: '#1F2937', border: 'none', fontSize: '8px' }}
                           itemStyle={{ fontSize: '9px', color: '#ffffff' }}
                           labelStyle={{ color: '#ffffff' }}
-                          formatter={(value: number) => [`${state.settings.currency}${formatNumber(value)}`, 'Value']}
+                          formatter={(value: number) => [`${state.settings.currency} ${formatMoney(value)}`, 'Value']}
                         />
                         <Legend
                           formatter={(value) => <span className="text-gray-300">{value}</span>}
@@ -394,9 +400,9 @@ export default function Reports() {
                             <span className="text-gray-300 text-sm">{category.name}</span>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-gray-100 text-sm">{state.settings.currency}{formatNumber(category.value)}</div>
+                            <div className="font-medium text-gray-100 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
                             <div className={`text-xs ${category.returnAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {category.returnAmount >= 0 ? '+' : ''}{category.returnPercentage.toFixed(1)}% ({state.settings.currency}{formatNumber(category.returnAmount)})
+                              {category.returnAmount >= 0 ? '+' : ''}{category.returnPercentage.toFixed(1)}% ({state.settings.currency} {formatMoney(category.returnAmount)})
                             </div>
                             <div className="text-xs text-gray-400">{category.percentage.toFixed(1)}% of portfolio</div>
                           </div>

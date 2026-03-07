@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import type { Settings as SettingsType } from '../types';
 import { DEFAULT_CATEGORIES, createCategory } from '../config/categories';
+import { groupLotsIntoPositions } from '../utils/investmentUtils';
 
 export default function Settings() {
   const { state, updateSettings, clearData, formatMoney } = useAppState();
@@ -31,6 +32,7 @@ export default function Settings() {
       incomes: state.incomes,
       investments: state.investments,
       goals: state.goals,
+      priceCache: state.priceCache,
       settings: {
         monthlyIncome: state.settings.monthlyIncome,
         categoryBudgets: state.settings.categoryBudgets
@@ -59,26 +61,22 @@ export default function Settings() {
       expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + e.amount;
     });
 
-    const totalInvested = state.investments.reduce((s, i) => s + i.amount, 0);
-    const totalCurrentValue = state.investments.reduce((s, i) => s + (i.currentValue || i.amount), 0);
+    // Investment calculations using positions
+    const positions = groupLotsIntoPositions(state.investments, state.priceCache);
+    const totalInvested = positions.reduce((s, p) => s + p.totalInvested, 0);
+    const totalCurrentValue = positions.reduce((s, p) => s + (p.currentValue ?? p.totalInvested), 0);
 
     const investmentsByCategory: Record<string, { invested: number; current: number }> = {};
-    state.investments.forEach(i => {
-      const cat = i.category || 'Uncategorized';
-      if (!investmentsByCategory[cat]) investmentsByCategory[cat] = { invested: 0, current: 0 };
-      investmentsByCategory[cat].invested += i.amount;
-      investmentsByCategory[cat].current += (i.currentValue || i.amount);
+    positions.forEach(p => {
+      if (!investmentsByCategory[p.category]) investmentsByCategory[p.category] = { invested: 0, current: 0 };
+      investmentsByCategory[p.category].invested += p.totalInvested;
+      investmentsByCategory[p.category].current += (p.currentValue ?? p.totalInvested);
     });
 
     const totalGoalTarget = state.goals.reduce((s, g) => s + g.targetAmount, 0);
     const totalGoalSaved = state.goals.reduce((s, g) => s + g.currentAmount, 0);
 
     const allTimeExpenses = state.expenses.reduce((s, e) => s + e.amount, 0);
-    const allTimeIncome = state.incomes.reduce((s, i) => {
-      if (i.isRecurring && i.frequency === 'Monthly') return s + i.amount;
-      if (i.frequency === 'One-time') return s + i.amount;
-      return s;
-    }, 0);
 
     let text = `# Personal Finance Summary\n`;
     text += `Export Date: ${now.toLocaleDateString()}\nCurrency: ${currency}\n\n`;
@@ -135,9 +133,16 @@ export default function Settings() {
       text += `- ${cat}: Invested ${formatMoney(data.invested)}, Current ${formatMoney(data.current)}, Return ${formatMoney(ret)} ${currency}\n`;
     });
 
-    text += `\nDetailed Investments:\n`;
-    state.investments.forEach(i => {
-      text += `- ${i.name} (${i.category}): Invested ${formatMoney(i.amount)}, Current ${formatMoney(i.currentValue || i.amount)} ${currency} [${new Date(i.date).toLocaleDateString()}]${i.notes ? ` - ${i.notes}` : ''}\n`;
+    text += `\nDetailed Positions:\n`;
+    positions.forEach(p => {
+      text += `- ${p.name}${p.ticker ? ` (${p.ticker})` : ''} [${p.category}]: ${p.totalQuantity} ${p.unitType}, Invested ${formatMoney(p.totalInvested)}, Current ${formatMoney(p.currentValue ?? p.totalInvested)} ${currency}`;
+      if (p.returnPercentage !== undefined) {
+        text += ` (${p.returnAmount! >= 0 ? '+' : ''}${p.returnPercentage.toFixed(1)}%)`;
+      }
+      text += '\n';
+      p.lots.forEach(lot => {
+        text += `    ${lot.quantity} ${lot.unitType} @ ${formatMoney(lot.pricePerUnit)} [${new Date(lot.date).toLocaleDateString()}]${lot.notes ? ` - ${lot.notes}` : ''}\n`;
+      });
     });
     text += `\n`;
 
@@ -157,7 +162,6 @@ export default function Settings() {
   }, [state, formatMoney, downloadFile]);
 
   const handleCopyLLM = useCallback(() => {
-    // Same content as handleExportLLM but copy to clipboard instead
     const currency = state.settings.currency;
     const now = new Date();
     const currentMonth = now.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -170,15 +174,18 @@ export default function Settings() {
     thisMonthExpenses.forEach(e => {
       expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + e.amount;
     });
-    const totalInvested = state.investments.reduce((s, i) => s + i.amount, 0);
-    const totalCurrentValue = state.investments.reduce((s, i) => s + (i.currentValue || i.amount), 0);
+
+    // Investment calculations using positions
+    const positions = groupLotsIntoPositions(state.investments, state.priceCache);
+    const totalInvested = positions.reduce((s, p) => s + p.totalInvested, 0);
+    const totalCurrentValue = positions.reduce((s, p) => s + (p.currentValue ?? p.totalInvested), 0);
     const investmentsByCategory: Record<string, { invested: number; current: number }> = {};
-    state.investments.forEach(i => {
-      const cat = i.category || 'Uncategorized';
-      if (!investmentsByCategory[cat]) investmentsByCategory[cat] = { invested: 0, current: 0 };
-      investmentsByCategory[cat].invested += i.amount;
-      investmentsByCategory[cat].current += (i.currentValue || i.amount);
+    positions.forEach(p => {
+      if (!investmentsByCategory[p.category]) investmentsByCategory[p.category] = { invested: 0, current: 0 };
+      investmentsByCategory[p.category].invested += p.totalInvested;
+      investmentsByCategory[p.category].current += (p.currentValue ?? p.totalInvested);
     });
+
     const totalGoalTarget = state.goals.reduce((s, g) => s + g.targetAmount, 0);
     const totalGoalSaved = state.goals.reduce((s, g) => s + g.currentAmount, 0);
     const allTimeExpenses = state.expenses.reduce((s, e) => s + e.amount, 0);
@@ -209,6 +216,10 @@ export default function Settings() {
     Object.entries(investmentsByCategory).forEach(([cat, data]) => {
       text += `- ${cat}: Invested ${formatMoney(data.invested)}, Current ${formatMoney(data.current)} ${currency}\n`;
     });
+    text += `\nPositions:\n`;
+    positions.forEach(p => {
+      text += `- ${p.name}${p.ticker ? ` (${p.ticker})` : ''}: ${p.totalQuantity} ${p.unitType}, Invested ${formatMoney(p.totalInvested)}, Current ${formatMoney(p.currentValue ?? p.totalInvested)} ${currency}\n`;
+    });
     text += `\n## Savings Goals\nTotal: ${formatMoney(totalGoalSaved)} / ${formatMoney(totalGoalTarget)} ${currency} (${totalGoalTarget > 0 ? ((totalGoalSaved / totalGoalTarget) * 100).toFixed(1) : '0'}%)\n`;
     state.goals.forEach(g => {
       text += `- ${g.name}: ${formatMoney(g.currentAmount)} / ${formatMoney(g.targetAmount)} ${currency}\n`;
@@ -233,11 +244,13 @@ export default function Settings() {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    
+
     const settings: SettingsType = {
+      ...state.settings,
       currency: formData.get('currency') as string,
       darkMode: formData.get('darkMode') === 'true',
-      customCategories: state.settings.customCategories || []
+      customCategories: state.settings.customCategories || [],
+      alphaVantageApiKey: (formData.get('alphaVantageApiKey') as string) || state.settings.alphaVantageApiKey,
     };
 
     updateSettings(settings);
@@ -326,6 +339,23 @@ export default function Settings() {
                 <option value="true">Enabled</option>
                 <option value="false">Disabled</option>
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="alphaVantageApiKey" className="block text-sm font-medium mb-1">
+                Alpha Vantage API Key <span className="text-gray-500">(for stock/ETF prices)</span>
+              </label>
+              <input
+                type="text"
+                name="alphaVantageApiKey"
+                id="alphaVantageApiKey"
+                className="input"
+                placeholder="Get free key at alphavantage.co"
+                defaultValue={state.settings.alphaVantageApiKey || ''}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Free tier: 25 API calls/day. Used for stock and ETF price updates.
+              </p>
             </div>
 
             <button type="submit" className="btn btn-primary w-full">
@@ -479,4 +509,4 @@ export default function Settings() {
       </div>
     </div>
   );
-} 
+}
