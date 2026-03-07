@@ -137,7 +137,7 @@ export default function Settings() {
     positions.forEach(p => {
       text += `- ${p.name}${p.ticker ? ` (${p.ticker})` : ''} [${p.category}]: ${p.totalQuantity} ${p.unitType}, Invested ${formatMoney(p.totalInvested)}, Current ${formatMoney(p.currentValue ?? p.totalInvested)} ${currency}`;
       if (p.returnPercentage !== undefined) {
-        text += ` (${p.returnAmount! >= 0 ? '+' : ''}${p.returnPercentage.toFixed(1)}%)`;
+        text += ` (${(p.returnAmount ?? 0) >= 0 ? '+' : ''}${(p.returnPercentage ?? 0).toFixed(1)}%)`;
       }
       text += '\n';
       p.lots.forEach(lot => {

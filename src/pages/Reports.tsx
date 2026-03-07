@@ -59,7 +59,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
       dominantBaseline="central"
       style={{ fontSize: '8px', fontWeight: 'bold' }}
     >
-      {`${(percent * 100).toFixed(0)}%`}
+      {`${((percent ?? 0) * 100).toFixed(0)}%`}
     </text>
   );
 };
@@ -254,7 +254,7 @@ export default function Reports() {
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Budget Used</h3>
                   <p className={`text-sm font-bold ${budgetUsedPercentage > 100 ? 'text-red-500' : 'text-gray-100'}`}>
-                    {budgetUsedPercentage.toFixed(1)}%
+                    {(budgetUsedPercentage ?? 0).toFixed(1)}%
                   </p>
                 </div>
               </div>
@@ -309,7 +309,7 @@ export default function Reports() {
                       </div>
                       <div className="text-right">
                         <div className="font-medium text-gray-100 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
-                        <div className="text-xs text-gray-400">{category.percentage.toFixed(1)}%</div>
+                        <div className="text-xs text-gray-400">{(category.percentage ?? 0).toFixed(1)}%</div>
                       </div>
                     </div>
                   ))}
@@ -343,7 +343,7 @@ export default function Reports() {
                 <div className="bg-gray-800 p-3 rounded-lg">
                   <h3 className="text-xs text-gray-400">Return %</h3>
                   <p className={`text-sm font-bold ${totalReturnPercentage < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    {totalReturnPercentage >= 0 ? '+' : ''}{totalReturnPercentage.toFixed(1)}%
+                    {totalReturnPercentage >= 0 ? '+' : ''}{(totalReturnPercentage ?? 0).toFixed(1)}%
                   </p>
                 </div>
               </div>
@@ -402,9 +402,9 @@ export default function Reports() {
                           <div className="text-right">
                             <div className="font-medium text-gray-100 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
                             <div className={`text-xs ${category.returnAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {category.returnAmount >= 0 ? '+' : ''}{category.returnPercentage.toFixed(1)}% ({state.settings.currency} {formatMoney(category.returnAmount)})
+                              {category.returnAmount >= 0 ? '+' : ''}{(category.returnPercentage ?? 0).toFixed(1)}% ({state.settings.currency} {formatMoney(category.returnAmount)})
                             </div>
-                            <div className="text-xs text-gray-400">{category.percentage.toFixed(1)}% of portfolio</div>
+                            <div className="text-xs text-gray-400">{(category.percentage ?? 0).toFixed(1)}% of portfolio</div>
                           </div>
                         </div>
                       ))}

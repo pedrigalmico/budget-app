@@ -222,7 +222,7 @@ export default function Investments() {
             <div className={`rounded-lg p-3 ${portfolioTotals.totalReturn >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
               <div className="text-xs text-gray-400 mb-1">Return</div>
               <div className={`font-semibold text-sm ${portfolioTotals.totalReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {portfolioTotals.totalReturn >= 0 ? '+' : ''}{portfolioTotals.totalReturnPct.toFixed(1)}%
+                {portfolioTotals.totalReturn >= 0 ? '+' : ''}{(portfolioTotals.totalReturnPct ?? 0).toFixed(1)}%
               </div>
             </div>
           </div>
@@ -500,7 +500,7 @@ export default function Investments() {
                       ? 'bg-green-500/20 text-green-400'
                       : 'bg-red-500/20 text-red-400'
                   }`}>
-                    {position.returnAmount >= 0 ? '+' : ''}{position.returnPercentage.toFixed(2)}%
+                    {position.returnAmount >= 0 ? '+' : ''}{(position.returnPercentage ?? 0).toFixed(2)}%
                   </span>
                 </div>
               </div>
