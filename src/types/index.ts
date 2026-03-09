@@ -44,8 +44,9 @@ export interface InvestmentLot {
   ticker?: string;            // For API lookup ("AAPL", "NVDA")
   category: string;           // From INVESTMENT_CATEGORIES
   quantity: number;           // 50 shares, 20 grams, etc.
-  pricePerUnit: number;       // Price paid per unit
+  pricePerUnit: number;       // Price paid per unit (in purchaseCurrency)
   unitType: string;           // "shares", "grams", "units", "coins"
+  purchaseCurrency?: string;  // "USD" or "SAR" — currency the purchase was made in
   date: string;
   notes?: string;
   manualCurrentValue?: number;    // Manual override for lot value
@@ -89,6 +90,7 @@ export interface Settings {
   alphaVantageApiKey?: string;
   categoryBudgets?: Record<string, number>;
   disabledDefaultCategories?: string[];
+  usdToSarRate?: number;  // USD to SAR exchange rate (default 3.75, pegged)
 }
 
 export interface AppState {

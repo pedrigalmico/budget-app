@@ -62,7 +62,7 @@ export default function Settings() {
     });
 
     // Investment calculations using positions
-    const positions = groupLotsIntoPositions(state.investments, state.priceCache);
+    const positions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
     const totalInvested = positions.reduce((s, p) => s + p.totalInvested, 0);
     const totalCurrentValue = positions.reduce((s, p) => s + (p.currentValue ?? p.totalInvested), 0);
 
@@ -176,7 +176,7 @@ export default function Settings() {
     });
 
     // Investment calculations using positions
-    const positions = groupLotsIntoPositions(state.investments, state.priceCache);
+    const positions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
     const totalInvested = positions.reduce((s, p) => s + p.totalInvested, 0);
     const totalCurrentValue = positions.reduce((s, p) => s + (p.currentValue ?? p.totalInvested), 0);
     const investmentsByCategory: Record<string, { invested: number; current: number }> = {};
@@ -245,12 +245,14 @@ export default function Settings() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
+    const usdToSarRateStr = formData.get('usdToSarRate') as string;
     const settings: SettingsType = {
       ...state.settings,
       currency: formData.get('currency') as string,
       darkMode: formData.get('darkMode') === 'true',
       customCategories: state.settings.customCategories || [],
       alphaVantageApiKey: (formData.get('alphaVantageApiKey') as string) || state.settings.alphaVantageApiKey,
+      usdToSarRate: usdToSarRateStr ? parseFloat(usdToSarRateStr) : 3.75,
     };
 
     updateSettings(settings);
@@ -355,6 +357,24 @@ export default function Settings() {
               />
               <p className="text-xs text-gray-500 mt-1">
                 Free tier: 25 API calls/day. Used for stock and ETF price updates.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="usdToSarRate" className="block text-sm font-medium mb-1">
+                USD to SAR Rate
+              </label>
+              <input
+                type="number"
+                name="usdToSarRate"
+                id="usdToSarRate"
+                className="input"
+                step="0.01"
+                min="0"
+                defaultValue={state.settings.usdToSarRate || 3.75}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Fixed peg rate is 3.75. Used to convert USD investments to SAR.
               </p>
             </div>
 

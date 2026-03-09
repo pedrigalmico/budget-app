@@ -1,13 +1,33 @@
 import { InvestmentLot, Position, PriceCache } from '../types';
 
+const DEFAULT_USD_TO_SAR = 3.75;
+
+/**
+ * Get the conversion rate from a lot's purchase currency to SAR.
+ * If lot was purchased in USD, multiply by usdToSarRate.
+ * If lot was purchased in SAR (or no currency specified), no conversion needed.
+ */
+function getLotToSarRate(lot: InvestmentLot, usdToSarRate: number, displayCurrency: string): number {
+  const purchaseCurrency = lot.purchaseCurrency || displayCurrency;
+  if (purchaseCurrency === 'USD' && displayCurrency === 'SAR') {
+    return usdToSarRate;
+  }
+  return 1;
+}
+
 /**
  * Groups individual investment lots into Position views.
  * Positions are computed/derived and never stored.
+ * All monetary values are converted to the display currency (SAR).
  */
 export function groupLotsIntoPositions(
   lots: InvestmentLot[],
-  priceCache?: PriceCache
+  priceCache?: PriceCache,
+  usdToSarRate?: number,
+  displayCurrency?: string
 ): Position[] {
+  const rate = usdToSarRate || DEFAULT_USD_TO_SAR;
+  const currency = displayCurrency || 'SAR';
   const grouped = new Map<string, InvestmentLot[]>();
 
   for (const lot of lots) {
@@ -24,11 +44,15 @@ export function groupLotsIntoPositions(
     );
 
     const firstLot = sortedLots[0];
+
+    // Calculate totals converting each lot's currency to display currency
     const totalQuantity = sortedLots.reduce((sum, lot) => sum + (Number(lot.quantity) || 0), 0);
-    const totalInvested = sortedLots.reduce(
-      (sum, lot) => sum + (Number(lot.quantity) || 0) * (Number(lot.pricePerUnit) || 0),
-      0
-    );
+    const totalInvested = sortedLots.reduce((sum, lot) => {
+      const qty = Number(lot.quantity) || 0;
+      const price = Number(lot.pricePerUnit) || 0;
+      const lotRate = getLotToSarRate(lot, rate, currency);
+      return sum + qty * price * lotRate;
+    }, 0);
     const avgCostBasis = totalQuantity > 0 ? totalInvested / totalQuantity : 0;
 
     // Position uses manual valuation if any lot does
@@ -40,16 +64,21 @@ export function groupLotsIntoPositions(
     if (useManualValuation) {
       // Sum manual values; fall back to cost basis for lots without manual value
       const manualTotal = sortedLots.reduce((sum, lot) => {
+        const lotRate = getLotToSarRate(lot, rate, currency);
         if (lot.manualCurrentValue !== undefined) {
-          return sum + (Number(lot.manualCurrentValue) || 0);
+          return sum + (Number(lot.manualCurrentValue) || 0) * lotRate;
         }
-        return sum + (Number(lot.quantity) || 0) * (Number(lot.pricePerUnit) || 0);
+        return sum + (Number(lot.quantity) || 0) * (Number(lot.pricePerUnit) || 0) * lotRate;
       }, 0);
       currentValue = manualTotal;
       currentPricePerUnit =
         totalQuantity > 0 ? manualTotal / totalQuantity : undefined;
     } else if (firstLot.ticker && priceCache?.[firstLot.ticker]) {
-      currentPricePerUnit = priceCache[firstLot.ticker].price;
+      // API prices are in USD — convert to display currency
+      const apiPrice = priceCache[firstLot.ticker].price;
+      const apiCurrency = priceCache[firstLot.ticker].currency || 'USD';
+      const apiRate = (apiCurrency === 'USD' && currency === 'SAR') ? rate : 1;
+      currentPricePerUnit = apiPrice * apiRate;
       currentValue = currentPricePerUnit * totalQuantity;
     }
 
@@ -84,17 +113,26 @@ export function groupLotsIntoPositions(
   return positions.sort((a, b) => b.totalInvested - a.totalInvested);
 }
 
-/** Get total invested amount across all lots */
-export function getTotalInvested(lots: InvestmentLot[]): number {
-  return lots.reduce((sum, lot) => sum + (Number(lot.quantity) || 0) * (Number(lot.pricePerUnit) || 0), 0);
+/** Get total invested amount across all lots (in display currency) */
+export function getTotalInvested(lots: InvestmentLot[], usdToSarRate?: number, displayCurrency?: string): number {
+  const rate = usdToSarRate || DEFAULT_USD_TO_SAR;
+  const currency = displayCurrency || 'SAR';
+  return lots.reduce((sum, lot) => {
+    const qty = Number(lot.quantity) || 0;
+    const price = Number(lot.pricePerUnit) || 0;
+    const lotRate = getLotToSarRate(lot, rate, currency);
+    return sum + qty * price * lotRate;
+  }, 0);
 }
 
-/** Get total current value across all positions */
+/** Get total current value across all positions (in display currency) */
 export function getTotalCurrentValue(
   lots: InvestmentLot[],
-  priceCache?: PriceCache
+  priceCache?: PriceCache,
+  usdToSarRate?: number,
+  displayCurrency?: string
 ): number {
-  const positions = groupLotsIntoPositions(lots, priceCache);
+  const positions = groupLotsIntoPositions(lots, priceCache, usdToSarRate, displayCurrency);
   return positions.reduce(
     (sum, pos) => sum + (pos.currentValue ?? pos.totalInvested),
     0

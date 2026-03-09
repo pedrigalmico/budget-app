@@ -140,8 +140,8 @@ export default function Reports() {
 
   // Compute positions from lots
   const positions = useMemo(() => {
-    return groupLotsIntoPositions(state.investments, state.priceCache);
-  }, [state.investments, state.priceCache]);
+    return groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+  }, [state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency]);
 
   // Investment calculations
   const totalInvested = useMemo(() => {

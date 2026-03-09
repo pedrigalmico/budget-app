@@ -70,9 +70,9 @@ export default function Home() {
   }, [state.expenses, selectedMonth, selectedYear]);
 
   const totalInvestments = useMemo(() => {
-    const positions = groupLotsIntoPositions(state.investments, state.priceCache);
+    const positions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
     return positions.reduce((sum, pos) => sum + (pos.currentValue ?? pos.totalInvested), 0);
-  }, [state.investments, state.priceCache]);
+  }, [state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency]);
 
   const totalGoals = useMemo(() => {
     return state.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
@@ -202,7 +202,7 @@ export default function Home() {
     }
 
     // Investment growth/decline
-    const investmentPositions = groupLotsIntoPositions(state.investments, state.priceCache);
+    const investmentPositions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
     const totalInvestmentGrowth = investmentPositions.reduce((sum, pos) => {
       if (pos.returnAmount !== undefined) {
         return sum + pos.returnAmount;

@@ -12,6 +12,9 @@ export default function Investments() {
     deletePosition, updatePriceCache, formatMoney
   } = useAppState();
 
+  const usdToSarRate = state.settings.usdToSarRate || 3.75;
+  const displayCurrency = state.settings.currency;
+
   // Price update hook
   const {
     isUpdating, progress, lastError, lastRefreshed,
@@ -36,11 +39,17 @@ export default function Investments() {
   const [selectedPositionKey, setSelectedPositionKey] = useState<string>('new');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [useManualVal, setUseManualVal] = useState(false);
+  const [purchaseCurrency, setPurchaseCurrency] = useState<string>('USD');
+
+  // Form fields for auto-calculation
+  const [amountInvested, setAmountInvested] = useState<string>('');
+  const [pricePerUnit, setPricePerUnit] = useState<string>('');
+  const [quantity, setQuantity] = useState<string>('');
 
   // Compute positions from lots
   const positions = useMemo(() => {
-    return groupLotsIntoPositions(state.investments, state.priceCache);
-  }, [state.investments, state.priceCache]);
+    return groupLotsIntoPositions(state.investments, state.priceCache, usdToSarRate, displayCurrency);
+  }, [state.investments, state.priceCache, usdToSarRate, displayCurrency]);
 
   // Portfolio totals
   const portfolioTotals = useMemo(() => {
@@ -53,12 +62,32 @@ export default function Investments() {
     return { totalInvested, totalCurrentValue, totalReturn, totalReturnPct };
   }, [positions]);
 
+  // Auto-calculate quantity when amount or price changes
+  useEffect(() => {
+    const amt = parseFloat(amountInvested);
+    const price = parseFloat(pricePerUnit);
+    if (amt > 0 && price > 0) {
+      setQuantity((amt / price).toFixed(6).replace(/\.?0+$/, ''));
+    }
+  }, [amountInvested, pricePerUnit]);
+
+  // Default currency based on category
+  useEffect(() => {
+    const usdCategories = ['Stocks', 'ETFs', 'Cryptocurrency', 'Mutual Funds'];
+    if (usdCategories.includes(selectedCategory)) {
+      setPurchaseCurrency('USD');
+    } else {
+      setPurchaseCurrency(displayCurrency);
+    }
+  }, [selectedCategory, displayCurrency]);
+
   // Open form to add a lot to an existing position
   const handleAddToPosition = (position: Position) => {
     setEditingLot(null);
     setSelectedPositionKey(position.positionKey);
     setSelectedCategory(position.category);
     setUseManualVal(position.useManualValuation);
+    resetFormFields();
     setShowForm(true);
   };
 
@@ -68,6 +97,7 @@ export default function Investments() {
     setSelectedPositionKey('new');
     setSelectedCategory('');
     setUseManualVal(false);
+    resetFormFields();
     setShowForm(true);
   };
 
@@ -77,7 +107,17 @@ export default function Investments() {
     setSelectedPositionKey(lot.positionKey);
     setSelectedCategory(lot.category);
     setUseManualVal(lot.useManualValuation || false);
+    setPurchaseCurrency(lot.purchaseCurrency || displayCurrency);
+    setPricePerUnit(String(lot.pricePerUnit));
+    setQuantity(String(lot.quantity));
+    setAmountInvested(String((lot.quantity * lot.pricePerUnit).toFixed(2)));
     setShowForm(true);
+  };
+
+  const resetFormFields = () => {
+    setAmountInvested('');
+    setPricePerUnit('');
+    setQuantity('');
   };
 
   const handleDeleteLot = (lotId: string) => {
@@ -101,17 +141,25 @@ export default function Investments() {
     const isExistingPosition = selectedPositionKey !== 'new';
     const existingPosition = positions.find(p => p.positionKey === selectedPositionKey);
 
-    const category = isExistingPosition && existingPosition
-      ? existingPosition.category
-      : (formData.get('category') as string);
+    // When editing a lot, use form values so user can change name/ticker/category
+    // When adding to an existing position, inherit from the position
+    const category = editingLot
+      ? (formData.get('category') as string) || editingLot.category
+      : isExistingPosition && existingPosition
+        ? existingPosition.category
+        : (formData.get('category') as string);
 
-    const name = isExistingPosition && existingPosition
-      ? existingPosition.name
-      : (formData.get('name') as string);
+    const name = editingLot
+      ? (formData.get('name') as string) || editingLot.name
+      : isExistingPosition && existingPosition
+        ? existingPosition.name
+        : (formData.get('name') as string);
 
-    const ticker = isExistingPosition && existingPosition
-      ? existingPosition.ticker
-      : ((formData.get('ticker') as string) || undefined);
+    const ticker = editingLot
+      ? ((formData.get('ticker') as string) || undefined)
+      : isExistingPosition && existingPosition
+        ? existingPosition.ticker
+        : ((formData.get('ticker') as string) || undefined);
 
     const positionKey = isExistingPosition
       ? selectedPositionKey
@@ -121,15 +169,21 @@ export default function Investments() {
 
     const manualCurrentValueStr = formData.get('manualCurrentValue') as string;
 
+    const qty = parseFloat(quantity);
+    const price = parseFloat(pricePerUnit);
+
+    if (!qty || qty <= 0 || !price || price <= 0) return;
+
     const lotData: InvestmentLot = {
       id: editingLot?.id || crypto.randomUUID(),
       positionKey,
       name,
       ticker: ticker || undefined,
       category,
-      quantity: parseFloat(formData.get('quantity') as string),
-      pricePerUnit: parseFloat(formData.get('pricePerUnit') as string),
+      quantity: qty,
+      pricePerUnit: price,
       unitType,
+      purchaseCurrency: purchaseCurrency,
       date: new Date(formData.get('date') as string).toISOString(),
       notes: (formData.get('notes') as string) || undefined,
       useManualValuation: useManualVal || undefined,
@@ -147,13 +201,14 @@ export default function Investments() {
     setShowForm(false);
     setEditingLot(null);
     setSelectedPositionKey('new');
-    form.reset();
+    resetFormFields();
   };
 
   const closeForm = () => {
     setShowForm(false);
     setEditingLot(null);
     setSelectedPositionKey('new');
+    resetFormFields();
   };
 
   const isExistingPosition = selectedPositionKey !== 'new';
@@ -161,6 +216,27 @@ export default function Investments() {
   const unitLabel = isExistingPosition && existingPosition
     ? existingPosition.unitType
     : (UNIT_TYPES[selectedCategory] || 'units');
+
+  // Helper to format lot values in display currency
+  const formatLotValue = (lot: InvestmentLot) => {
+    const lotCurrency = lot.purchaseCurrency || displayCurrency;
+    const rate = (lotCurrency === 'USD' && displayCurrency === 'SAR') ? usdToSarRate : 1;
+    return formatMoney(lot.quantity * lot.pricePerUnit * rate);
+  };
+
+  const formatLotPrice = (lot: InvestmentLot) => {
+    const lotCurrency = lot.purchaseCurrency || displayCurrency;
+    const rate = (lotCurrency === 'USD' && displayCurrency === 'SAR') ? usdToSarRate : 1;
+    return formatMoney(lot.pricePerUnit * rate);
+  };
+
+  // Show SAR equivalent for USD purchases
+  const sarEquivalent = useMemo(() => {
+    if (purchaseCurrency !== 'USD' || displayCurrency !== 'SAR') return null;
+    const amt = parseFloat(amountInvested);
+    if (!amt || amt <= 0) return null;
+    return amt * usdToSarRate;
+  }, [amountInvested, purchaseCurrency, displayCurrency, usdToSarRate]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -210,13 +286,13 @@ export default function Investments() {
             <div className="bg-gray-800/50 rounded-lg p-3">
               <div className="text-xs text-gray-400 mb-1">Invested</div>
               <div className="font-semibold dark:text-white text-sm">
-                {state.settings.currency} {formatMoney(portfolioTotals.totalInvested)}
+                {displayCurrency} {formatMoney(portfolioTotals.totalInvested)}
               </div>
             </div>
             <div className="bg-gray-800/50 rounded-lg p-3">
               <div className="text-xs text-gray-400 mb-1">Current</div>
               <div className="font-semibold dark:text-white text-sm">
-                {state.settings.currency} {formatMoney(portfolioTotals.totalCurrentValue)}
+                {displayCurrency} {formatMoney(portfolioTotals.totalCurrentValue)}
               </div>
             </div>
             <div className={`rounded-lg p-3 ${portfolioTotals.totalReturn >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
@@ -261,7 +337,7 @@ export default function Investments() {
                   <option value="new">+ Create New Position</option>
                   {positions.map(pos => (
                     <option key={pos.positionKey} value={pos.positionKey}>
-                      {pos.name} {pos.ticker ? `(${pos.ticker})` : ''} — {pos.totalQuantity} {pos.unitType}
+                      {pos.name} {pos.ticker ? `(${pos.ticker})` : ''} — {pos.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {pos.unitType}
                     </option>
                   ))}
                 </select>
@@ -310,45 +386,87 @@ export default function Investments() {
                     name="ticker"
                     id="ticker"
                     className="input mt-1 uppercase"
-                    placeholder="e.g. AAPL, NVDA, BTC"
+                    placeholder="e.g. AAPL, NVDA, VOO"
                     defaultValue={editingLot?.ticker}
                   />
                 </div>
               </>
             )}
 
-            {/* Quantity & Price fields */}
+            {/* Purchase Currency */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Purchase Currency</label>
+              <div className="flex gap-2">
+                {['USD', 'SAR'].map(cur => (
+                  <button
+                    key={cur}
+                    type="button"
+                    onClick={() => setPurchaseCurrency(cur)}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                      purchaseCurrency === cur
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {cur}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Amount Invested + Price Per Unit */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="quantity" className="block text-sm font-medium mb-1">
-                  Quantity ({unitLabel})
+                <label htmlFor="amountInvested" className="block text-sm font-medium mb-1">
+                  Amount Invested ({purchaseCurrency})
                 </label>
                 <input
                   type="number"
-                  name="quantity"
-                  id="quantity"
+                  id="amountInvested"
                   required
                   min="0"
                   step="any"
                   className="input mt-1"
-                  defaultValue={editingLot?.quantity}
+                  placeholder="e.g. 500"
+                  value={amountInvested}
+                  onChange={(e) => setAmountInvested(e.target.value)}
                 />
               </div>
               <div>
                 <label htmlFor="pricePerUnit" className="block text-sm font-medium mb-1">
-                  Price / Unit ({state.settings.currency})
+                  Price / {unitLabel.replace(/s$/, '')} ({purchaseCurrency})
                 </label>
                 <input
                   type="number"
-                  name="pricePerUnit"
                   id="pricePerUnit"
                   required
                   min="0"
                   step="any"
                   className="input mt-1"
-                  defaultValue={editingLot?.pricePerUnit}
+                  placeholder="e.g. 175.50"
+                  value={pricePerUnit}
+                  onChange={(e) => setPricePerUnit(e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* Auto-calculated quantity */}
+            <div className="bg-gray-800/50 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-400">Quantity ({unitLabel})</span>
+                <span className="text-sm font-medium dark:text-white">
+                  {quantity ? `${quantity} ${unitLabel}` : '—'}
+                </span>
+              </div>
+              {sarEquivalent && (
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-xs text-gray-500">SAR equivalent</span>
+                  <span className="text-xs text-blue-400">
+                    SAR {formatMoney(sarEquivalent)}
+                    <span className="text-gray-600 ml-1">(@ {usdToSarRate})</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -383,7 +501,7 @@ export default function Investments() {
             {useManualVal && (
               <div>
                 <label htmlFor="manualCurrentValue" className="block text-sm font-medium mb-1">
-                  Current Value ({state.settings.currency})
+                  Current Value ({purchaseCurrency})
                 </label>
                 <input
                   type="number"
@@ -440,7 +558,7 @@ export default function Investments() {
                 </div>
                 <div className="text-xs text-blue-400">{position.category}</div>
                 <div className="text-xs text-gray-400 mt-0.5">
-                  {position.totalQuantity} {position.unitType} · Avg {state.settings.currency} {formatMoney(position.avgCostBasis)}/{position.unitType.replace(/s$/, '')}
+                  {position.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {position.unitType} · Avg {displayCurrency} {formatMoney(position.avgCostBasis)}/{position.unitType.replace(/s$/, '')}
                 </div>
               </div>
               <div className="flex items-center gap-1 ml-2">
@@ -470,14 +588,14 @@ export default function Investments() {
               <div className="bg-gray-800/50 rounded-lg p-3">
                 <div className="text-xs text-gray-400 mb-1">Invested</div>
                 <div className="font-semibold dark:text-white">
-                  {state.settings.currency} {formatMoney(position.totalInvested)}
+                  {displayCurrency} {formatMoney(position.totalInvested)}
                 </div>
               </div>
               {position.currentValue !== undefined && (
                 <div className="bg-gray-800/50 rounded-lg p-3">
                   <div className="text-xs text-gray-400 mb-1">Current Value</div>
                   <div className="font-semibold dark:text-white">
-                    {state.settings.currency} {formatMoney(position.currentValue)}
+                    {displayCurrency} {formatMoney(position.currentValue)}
                   </div>
                 </div>
               )}
@@ -493,7 +611,7 @@ export default function Investments() {
                   <span className={`text-sm font-semibold ${
                     position.returnAmount >= 0 ? 'text-green-400' : 'text-red-400'
                   }`}>
-                    {position.returnAmount >= 0 ? '+' : ''}{state.settings.currency} {formatMoney(position.returnAmount)}
+                    {position.returnAmount >= 0 ? '+' : ''}{displayCurrency} {formatMoney(position.returnAmount)}
                   </span>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                     position.returnAmount >= 0
@@ -512,7 +630,7 @@ export default function Investments() {
             )}
             {!position.useManualValuation && position.ticker && position.currentPricePerUnit !== undefined && (
               <div className="mt-2 text-xs text-gray-500">
-                Live: {state.settings.currency} {formatMoney(position.currentPricePerUnit)}/{position.unitType.replace(/s$/, '')}
+                Live: {displayCurrency} {formatMoney(position.currentPricePerUnit)}/{position.unitType.replace(/s$/, '')}
                 {state.priceCache?.[position.ticker] && (
                   <span className="text-gray-600"> · {new Date(state.priceCache[position.ticker].lastUpdated).toLocaleString()}</span>
                 )}
@@ -551,14 +669,17 @@ export default function Investments() {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="text-sm dark:text-white">
-                          {lot.quantity} {lot.unitType} @ {state.settings.currency} {formatMoney(lot.pricePerUnit)}
+                          {lot.quantity.toFixed(4).replace(/\.?0+$/, '')} {lot.unitType} @ {lot.purchaseCurrency || displayCurrency} {formatMoney(lot.pricePerUnit)}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {new Date(lot.date).toLocaleDateString()} · Total: {state.settings.currency} {formatMoney(lot.quantity * lot.pricePerUnit)}
+                          {new Date(lot.date).toLocaleDateString()} · Total: {displayCurrency} {formatLotValue(lot)}
+                          {lot.purchaseCurrency === 'USD' && displayCurrency === 'SAR' && (
+                            <span className="text-gray-600"> (${formatMoney(lot.quantity * lot.pricePerUnit)})</span>
+                          )}
                         </div>
                         {lot.manualCurrentValue !== undefined && (
                           <div className="text-xs text-blue-400">
-                            Current: {state.settings.currency} {formatMoney(lot.manualCurrentValue)}
+                            Current: {displayCurrency} {formatMoney(lot.manualCurrentValue)}
                           </div>
                         )}
                         {lot.notes && (

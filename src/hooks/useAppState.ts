@@ -16,7 +16,8 @@ export const useAppState = () => {
       currency: 'SAR',
       darkMode: false,
       customCategories: [],
-      categoryBudgets: {}
+      categoryBudgets: {},
+      usdToSarRate: 3.75
     }
   }));
 
@@ -253,7 +254,8 @@ export const useAppState = () => {
       currency: 'SAR',
       darkMode: false,
       customCategories: [],
-      categoryBudgets: {}
+      categoryBudgets: {},
+      usdToSarRate: 3.75
     }
   };
 
