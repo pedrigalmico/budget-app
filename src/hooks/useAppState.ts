@@ -188,6 +188,17 @@ export const useAppState = () => {
     }
   };
 
+  const updatePositionDetails = (positionKey: string, updates: { name?: string; ticker?: string }) => {
+    updateState({
+      ...state,
+      investments: state.investments.map(lot =>
+        lot.positionKey === positionKey
+          ? { ...lot, ...updates, ticker: updates.ticker || undefined }
+          : lot
+      )
+    });
+  };
+
   const deletePosition = (positionKey: string) => {
     try {
       updateState({
@@ -310,6 +321,7 @@ export const useAppState = () => {
     updateInvestmentLot,
     deleteInvestmentLot,
     deletePosition,
+    updatePositionDetails,
     updatePriceCache,
     // Income
     addIncome,

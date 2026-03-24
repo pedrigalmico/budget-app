@@ -4,12 +4,12 @@ import { usePriceUpdates } from '../hooks/usePriceUpdates';
 import { InvestmentLot, Position } from '../types';
 import { INVESTMENT_CATEGORIES, UNIT_TYPES } from '../config/categories';
 import { groupLotsIntoPositions } from '../utils/investmentUtils';
-import { FaPlus, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaTimes, FaSyncAlt } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaTimes, FaSyncAlt, FaCheck } from 'react-icons/fa';
 
 export default function Investments() {
   const {
     state, addInvestmentLot, updateInvestmentLot, deleteInvestmentLot,
-    deletePosition, updatePriceCache, formatMoney
+    deletePosition, updatePositionDetails, updatePriceCache, formatMoney
   } = useAppState();
 
   const usdToSarRate = state.settings.usdToSarRate || 3.75;
@@ -40,6 +40,11 @@ export default function Investments() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [useManualVal, setUseManualVal] = useState(false);
   const [purchaseCurrency, setPurchaseCurrency] = useState<string>('USD');
+
+  // Inline position editing
+  const [editingPosition, setEditingPosition] = useState<string | null>(null);
+  const [editPosName, setEditPosName] = useState('');
+  const [editPosTicker, setEditPosTicker] = useState('');
 
   // Form fields for auto-calculation
   const [amountInvested, setAmountInvested] = useState<string>('');
@@ -124,6 +129,21 @@ export default function Investments() {
     if (window.confirm('Delete this purchase lot?')) {
       deleteInvestmentLot(lotId);
     }
+  };
+
+  const handleEditPosition = (position: Position) => {
+    setEditingPosition(position.positionKey);
+    setEditPosName(position.name);
+    setEditPosTicker(position.ticker || '');
+  };
+
+  const handleSavePosition = (positionKey: string) => {
+    if (!editPosName.trim()) return;
+    updatePositionDetails(positionKey, {
+      name: editPosName.trim(),
+      ticker: editPosTicker.trim().toUpperCase() || undefined,
+    });
+    setEditingPosition(null);
   };
 
   const handleDeletePosition = (positionKey: string) => {
@@ -386,9 +406,12 @@ export default function Investments() {
                     name="ticker"
                     id="ticker"
                     className="input mt-1 uppercase"
-                    placeholder="e.g. AAPL, NVDA, VOO"
+                    placeholder="e.g. AAPL, NVDA, XAU-24K, XAU-18K"
                     defaultValue={editingLot?.ticker}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Gold by karat: XAU-24K, XAU-22K, XAU-21K, XAU-18K, XAU-14K · Other: XAG (Silver), XPT (Platinum)
+                  </p>
                 </div>
               </>
             )}
@@ -546,42 +569,84 @@ export default function Investments() {
         {positions.map(position => (
           <div key={position.positionKey} className="card">
             {/* Position Header */}
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-lg dark:text-white truncate">{position.name}</h3>
-                  {position.ticker && (
-                    <span className="text-xs font-medium bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full shrink-0">
-                      {position.ticker}
-                    </span>
-                  )}
+            {editingPosition === position.positionKey ? (
+              <div className="mb-3 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editPosName}
+                    onChange={(e) => setEditPosName(e.target.value)}
+                    className="input flex-1 text-sm"
+                    placeholder="Name"
+                  />
+                  <input
+                    type="text"
+                    value={editPosTicker}
+                    onChange={(e) => setEditPosTicker(e.target.value)}
+                    className="input w-24 text-sm uppercase"
+                    placeholder="Ticker"
+                  />
                 </div>
-                <div className="text-xs text-blue-400">{position.category}</div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {position.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {position.unitType} · Avg {displayCurrency} {formatMoney(position.avgCostBasis)}/{position.unitType.replace(/s$/, '')}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSavePosition(position.positionKey)}
+                    className="btn btn-primary text-xs flex items-center gap-1 px-3 py-1.5"
+                  >
+                    <FaCheck size={10} /> Save
+                  </button>
+                  <button
+                    onClick={() => setEditingPosition(null)}
+                    className="btn btn-secondary text-xs flex items-center gap-1 px-3 py-1.5"
+                  >
+                    <FaTimes size={10} /> Cancel
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-1 ml-2">
-                <button
-                  onClick={() => handleAddToPosition(position)}
-                  className="btn btn-secondary p-2"
-                  title="Add lot"
-                >
-                  <FaPlus size={12} />
-                </button>
-                <button
-                  onClick={() => setExpandedPosition(
-                    expandedPosition === position.positionKey ? null : position.positionKey
-                  )}
-                  className="btn btn-secondary p-2"
-                  title="Show lots"
-                >
-                  {expandedPosition === position.positionKey
-                    ? <FaChevronUp size={12} />
-                    : <FaChevronDown size={12} />}
-                </button>
+            ) : (
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-lg dark:text-white truncate">{position.name}</h3>
+                    {position.ticker && (
+                      <span className="text-xs font-medium bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full shrink-0">
+                        {position.ticker}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-blue-400">{position.category}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {position.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {position.unitType} · Avg {displayCurrency} {formatMoney(position.avgCostBasis)}/{position.unitType.replace(/s$/, '')}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    onClick={() => handleEditPosition(position)}
+                    className="btn btn-secondary p-2"
+                    title="Edit position"
+                  >
+                    <FaEdit size={12} />
+                  </button>
+                  <button
+                    onClick={() => handleAddToPosition(position)}
+                    className="btn btn-secondary p-2"
+                    title="Add lot"
+                  >
+                    <FaPlus size={12} />
+                  </button>
+                  <button
+                    onClick={() => setExpandedPosition(
+                      expandedPosition === position.positionKey ? null : position.positionKey
+                    )}
+                    className="btn btn-secondary p-2"
+                    title="Show lots"
+                  >
+                    {expandedPosition === position.positionKey
+                      ? <FaChevronUp size={12} />
+                      : <FaChevronDown size={12} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Position Amounts */}
             <div className="grid grid-cols-2 gap-3 mt-2">
@@ -634,6 +699,11 @@ export default function Investments() {
                 {state.priceCache?.[position.ticker] && (
                   <span className="text-gray-600"> · {new Date(state.priceCache[position.ticker].lastUpdated).toLocaleString()}</span>
                 )}
+              </div>
+            )}
+            {!position.useManualValuation && !position.ticker && (
+              <div className="mt-2 text-xs text-amber-500/80 italic">
+                No ticker symbol — tap <FaEdit size={10} className="inline mx-0.5" /> to add one for live price tracking
               </div>
             )}
             {!position.useManualValuation && position.ticker && position.currentValue === undefined && !state.settings.alphaVantageApiKey && (
