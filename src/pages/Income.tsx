@@ -104,6 +104,133 @@ export default function Income() {
     }
   };
 
+  const renderIncomeForm = () => (
+    <div className="card">
+      <h2 className="text-lg font-semibold mb-4">
+        {editingIncome ? 'Edit Income' : 'Add New Income'}
+      </h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium mb-1">
+            Income Name
+          </label>
+          <input
+            type="text"
+            name="name"
+            id="name"
+            required
+            className="input"
+            placeholder="e.g., Main Job Salary"
+            defaultValue={editingIncome?.name}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="amount" className="block text-sm font-medium mb-1">
+            Amount ({state.settings.currency})
+          </label>
+          <input
+            type="number"
+            name="amount"
+            id="amount"
+            required
+            min="0"
+            step="0.01"
+            className="input"
+            defaultValue={editingIncome?.amount}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="type" className="block text-sm font-medium mb-1">
+            Type
+          </label>
+          <select
+            name="type"
+            id="type"
+            required
+            className="input"
+            defaultValue={editingIncome?.type}
+          >
+            {INCOME_TYPES.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="frequency" className="block text-sm font-medium mb-1">
+            Frequency
+          </label>
+          <select
+            name="frequency"
+            id="frequency"
+            required
+            className="input"
+            defaultValue={editingIncome?.frequency}
+          >
+            <option value="Monthly">Monthly</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Yearly">Yearly</option>
+            <option value="One-time">One-time</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="date" className="block text-sm font-medium mb-1">
+            Date
+          </label>
+          <input
+            type="date"
+            name="date"
+            id="date"
+            required
+            className="input"
+            defaultValue={editingIncome?.date}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="note" className="block text-sm font-medium mb-1">
+            Note (Optional)
+          </label>
+          <input
+            type="text"
+            name="note"
+            id="note"
+            className="input"
+            defaultValue={editingIncome?.note}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <button type="submit" className="btn btn-primary flex-1">
+            {editingIncome ? 'Save Changes' : 'Add Income'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowForm(false);
+              setEditingIncome(null);
+            }}
+            className="btn btn-secondary"
+          >
+            Cancel
+          </button>
+        </div>
+        {editingIncome && (
+          <button
+            type="button"
+            onClick={() => handleDelete(editingIncome.id)}
+            className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
+          >
+            <FaTrash /> Delete Income
+          </button>
+        )}
+      </form>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto">
@@ -136,165 +263,48 @@ export default function Income() {
           </div>
         </div>
 
-        {/* Add/Edit Form */}
-        {showForm && (
-          <div className="card">
-            <h2 className="text-lg font-semibold mb-4">
-              {editingIncome ? 'Edit Income' : 'Add New Income'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium mb-1">
-                  Income Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  id="name"
-                  required
-                  className="input"
-                  placeholder="e.g., Main Job Salary"
-                  defaultValue={editingIncome?.name}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="amount" className="block text-sm font-medium mb-1">
-                  Amount ({state.settings.currency})
-                </label>
-                <input
-                  type="number"
-                  name="amount"
-                  id="amount"
-                  required
-                  min="0"
-                  step="0.01"
-                  className="input"
-                  defaultValue={editingIncome?.amount}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="type" className="block text-sm font-medium mb-1">
-                  Type
-                </label>
-                <select
-                  name="type"
-                  id="type"
-                  required
-                  className="input"
-                  defaultValue={editingIncome?.type}
-                >
-                  {INCOME_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="frequency" className="block text-sm font-medium mb-1">
-                  Frequency
-                </label>
-                <select
-                  name="frequency"
-                  id="frequency"
-                  required
-                  className="input"
-                  defaultValue={editingIncome?.frequency}
-                >
-                  <option value="Monthly">Monthly</option>
-                  <option value="Weekly">Weekly</option>
-                  <option value="Yearly">Yearly</option>
-                  <option value="One-time">One-time</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="date" className="block text-sm font-medium mb-1">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  id="date"
-                  required
-                  className="input"
-                  defaultValue={editingIncome?.date}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="note" className="block text-sm font-medium mb-1">
-                  Note (Optional)
-                </label>
-                <input
-                  type="text"
-                  name="note"
-                  id="note"
-                  className="input"
-                  defaultValue={editingIncome?.note}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button type="submit" className="btn btn-primary flex-1">
-                  {editingIncome ? 'Save Changes' : 'Add Income'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingIncome(null);
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-              </div>
-              {editingIncome && (
-                <button
-                  type="button"
-                  onClick={() => handleDelete(editingIncome.id)}
-                  className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
-                >
-                  <FaTrash /> Delete Income
-                </button>
-              )}
-            </form>
-          </div>
-        )}
+        {/* Add Form — only show at top for new income */}
+        {showForm && !editingIncome && renderIncomeForm()}
 
         {/* Income List */}
         <div className="space-y-4">
           {state.incomes.map(income => (
-            <div key={income.id} className="card">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium">{income.name}</h3>
-                  <div className="text-sm text-gray-400">
-                    {income.type} • {income.frequency}
-                  </div>
-                  {income.note && (
-                    <div className="mt-1 text-sm text-gray-400">{income.note}</div>
-                  )}
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="text-right">
-                    <div className="font-semibold text-green-500">
-                      {state.settings.currency} {formatMoney(income.amount)}
-                    </div>
+            <div key={income.id}>
+              <div className="card">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">{income.name}</h3>
                     <div className="text-sm text-gray-400">
-                      {new Date(income.date).toLocaleDateString()}
+                      {income.type} • {income.frequency}
                     </div>
+                    {income.note && (
+                      <div className="mt-1 text-sm text-gray-400">{income.note}</div>
+                    )}
                   </div>
-                  <button
-                    onClick={() => handleEdit(income)}
-                    className="btn btn-secondary p-2"
-                  >
-                    <FaEdit />
-                  </button>
+                  <div className="flex items-start gap-4">
+                    <div className="text-right">
+                      <div className="font-semibold text-green-500">
+                        {state.settings.currency} {formatMoney(income.amount)}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {new Date(income.date).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleEdit(income)}
+                      className="btn btn-secondary p-2"
+                    >
+                      <FaEdit />
+                    </button>
+                  </div>
                 </div>
               </div>
+              {/* Inline edit form for this income */}
+              {showForm && editingIncome?.id === income.id && (
+                <div className="mt-2">
+                  {renderIncomeForm()}
+                </div>
+              )}
             </div>
           ))}
         </div>

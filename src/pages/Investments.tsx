@@ -94,6 +94,7 @@ export default function Investments() {
     setUseManualVal(position.useManualValuation);
     resetFormFields();
     setShowForm(true);
+    setExpandedPosition(position.positionKey);
   };
 
   // Open form for a new position
@@ -117,6 +118,7 @@ export default function Investments() {
     setQuantity(String(lot.quantity));
     setAmountInvested(String((lot.quantity * lot.pricePerUnit).toFixed(2)));
     setShowForm(true);
+    setExpandedPosition(lot.positionKey);
   };
 
   const resetFormFields = () => {
@@ -258,6 +260,249 @@ export default function Investments() {
     return amt * usdToSarRate;
   }, [amountInvested, purchaseCurrency, displayCurrency, usdToSarRate]);
 
+  // Check if the form should render inside a specific position card
+  const formTargetPositionKey = showForm && (isExistingPosition || editingLot)
+    ? (editingLot?.positionKey || selectedPositionKey)
+    : null;
+
+  const renderLotForm = () => (
+    <div className="card">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold dark:text-white">
+          {editingLot ? 'Edit Lot' : isExistingPosition ? `Add Lot to ${existingPosition?.name}` : 'Add New Investment'}
+        </h2>
+        <button onClick={closeForm} className="text-gray-400 hover:text-white">
+          <FaTimes />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Position selector (only when creating, not editing) */}
+        {!editingLot && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Position</label>
+            <select
+              value={selectedPositionKey}
+              onChange={(e) => {
+                setSelectedPositionKey(e.target.value);
+                const pos = positions.find(p => p.positionKey === e.target.value);
+                if (pos) {
+                  setSelectedCategory(pos.category);
+                  setUseManualVal(pos.useManualValuation);
+                }
+              }}
+              className="input mt-1"
+            >
+              <option value="new">+ Create New Position</option>
+              {positions.map(pos => (
+                <option key={pos.positionKey} value={pos.positionKey}>
+                  {pos.name} {pos.ticker ? `(${pos.ticker})` : ''} — {pos.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {pos.unitType}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Fields for new position or editing */}
+        {(!isExistingPosition || editingLot) && (
+          <>
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium mb-1">Category</label>
+              <select
+                name="category"
+                id="category"
+                required={!isExistingPosition}
+                className="input mt-1"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+              >
+                <option value="" disabled>Select a category</option>
+                {INVESTMENT_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium mb-1">Name</label>
+              <input
+                type="text"
+                name="name"
+                id="name"
+                required={!isExistingPosition}
+                className="input mt-1"
+                placeholder="e.g. Apple Inc., Gold 24k"
+                defaultValue={editingLot?.name}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="ticker" className="block text-sm font-medium mb-1">
+                Ticker Symbol <span className="text-gray-500">(optional, for price lookup)</span>
+              </label>
+              <input
+                type="text"
+                name="ticker"
+                id="ticker"
+                className="input mt-1 uppercase"
+                placeholder="e.g. AAPL, NVDA, XAU-24K, XAU-18K"
+                defaultValue={editingLot?.ticker}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Gold by karat: XAU-24K, XAU-22K, XAU-21K, XAU-18K, XAU-14K · Other: XAG (Silver), XPT (Platinum)
+              </p>
+            </div>
+          </>
+        )}
+
+        {/* Purchase Currency */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Purchase Currency</label>
+          <div className="flex gap-2">
+            {['USD', 'SAR'].map(cur => (
+              <button
+                key={cur}
+                type="button"
+                onClick={() => setPurchaseCurrency(cur)}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  purchaseCurrency === cur
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {cur}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Amount Invested + Price Per Unit */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="amountInvested" className="block text-sm font-medium mb-1">
+              Amount Invested ({purchaseCurrency})
+            </label>
+            <input
+              type="number"
+              id="amountInvested"
+              required
+              min="0"
+              step="any"
+              className="input mt-1"
+              placeholder="e.g. 500"
+              value={amountInvested}
+              onChange={(e) => setAmountInvested(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="pricePerUnit" className="block text-sm font-medium mb-1">
+              Price / {unitLabel.replace(/s$/, '')} ({purchaseCurrency})
+            </label>
+            <input
+              type="number"
+              id="pricePerUnit"
+              required
+              min="0"
+              step="any"
+              className="input mt-1"
+              placeholder="e.g. 175.50"
+              value={pricePerUnit}
+              onChange={(e) => setPricePerUnit(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Auto-calculated quantity */}
+        <div className="bg-gray-800/50 rounded-lg p-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-400">Quantity ({unitLabel})</span>
+            <span className="text-sm font-medium dark:text-white">
+              {quantity ? `${quantity} ${unitLabel}` : '—'}
+            </span>
+          </div>
+          {sarEquivalent && (
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-xs text-gray-500">SAR equivalent</span>
+              <span className="text-xs text-blue-400">
+                SAR {formatMoney(sarEquivalent)}
+                <span className="text-gray-600 ml-1">(@ {usdToSarRate})</span>
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="date" className="block text-sm font-medium mb-1">Purchase Date</label>
+          <input
+            type="date"
+            name="date"
+            id="date"
+            required
+            className="input mt-1"
+            defaultValue={editingLot?.date
+              ? new Date(editingLot.date).toISOString().split('T')[0]
+              : new Date().toISOString().split('T')[0]
+            }
+          />
+        </div>
+
+        {/* Manual valuation toggle */}
+        <div className="flex items-center gap-3">
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useManualVal}
+              onChange={(e) => setUseManualVal(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+          <span className="text-sm">Manual valuation (no API price lookup)</span>
+        </div>
+
+        {useManualVal && (
+          <div>
+            <label htmlFor="manualCurrentValue" className="block text-sm font-medium mb-1">
+              Current Value ({purchaseCurrency})
+            </label>
+            <input
+              type="number"
+              name="manualCurrentValue"
+              id="manualCurrentValue"
+              min="0"
+              step="any"
+              className="input mt-1"
+              placeholder="Leave empty to use cost basis"
+              defaultValue={editingLot?.manualCurrentValue}
+            />
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="notes" className="block text-sm font-medium mb-1">
+            Notes <span className="text-gray-500">(optional)</span>
+          </label>
+          <textarea
+            name="notes"
+            id="notes"
+            className="input mt-1"
+            rows={2}
+            defaultValue={editingLot?.notes}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <button type="submit" className="btn btn-primary flex-1">
+            {editingLot ? 'Save Changes' : 'Add Lot'}
+          </button>
+          <button type="button" onClick={closeForm} className="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center mb-6">
@@ -325,244 +570,8 @@ export default function Investments() {
         </div>
       )}
 
-      {/* Add/Edit Lot Form */}
-      {showForm && (
-        <div className="card">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold dark:text-white">
-              {editingLot ? 'Edit Lot' : isExistingPosition ? `Add Lot to ${existingPosition?.name}` : 'Add New Investment'}
-            </h2>
-            <button onClick={closeForm} className="text-gray-400 hover:text-white">
-              <FaTimes />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Position selector (only when creating, not editing) */}
-            {!editingLot && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Position</label>
-                <select
-                  value={selectedPositionKey}
-                  onChange={(e) => {
-                    setSelectedPositionKey(e.target.value);
-                    const pos = positions.find(p => p.positionKey === e.target.value);
-                    if (pos) {
-                      setSelectedCategory(pos.category);
-                      setUseManualVal(pos.useManualValuation);
-                    }
-                  }}
-                  className="input mt-1"
-                >
-                  <option value="new">+ Create New Position</option>
-                  {positions.map(pos => (
-                    <option key={pos.positionKey} value={pos.positionKey}>
-                      {pos.name} {pos.ticker ? `(${pos.ticker})` : ''} — {pos.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {pos.unitType}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Fields for new position or editing */}
-            {(!isExistingPosition || editingLot) && (
-              <>
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium mb-1">Category</label>
-                  <select
-                    name="category"
-                    id="category"
-                    required={!isExistingPosition}
-                    className="input mt-1"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    <option value="" disabled>Select a category</option>
-                    {INVESTMENT_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium mb-1">Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    required={!isExistingPosition}
-                    className="input mt-1"
-                    placeholder="e.g. Apple Inc., Gold 24k"
-                    defaultValue={editingLot?.name}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="ticker" className="block text-sm font-medium mb-1">
-                    Ticker Symbol <span className="text-gray-500">(optional, for price lookup)</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="ticker"
-                    id="ticker"
-                    className="input mt-1 uppercase"
-                    placeholder="e.g. AAPL, NVDA, XAU-24K, XAU-18K"
-                    defaultValue={editingLot?.ticker}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Gold by karat: XAU-24K, XAU-22K, XAU-21K, XAU-18K, XAU-14K · Other: XAG (Silver), XPT (Platinum)
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Purchase Currency */}
-            <div>
-              <label className="block text-sm font-medium mb-1">Purchase Currency</label>
-              <div className="flex gap-2">
-                {['USD', 'SAR'].map(cur => (
-                  <button
-                    key={cur}
-                    type="button"
-                    onClick={() => setPurchaseCurrency(cur)}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                      purchaseCurrency === cur
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    {cur}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Amount Invested + Price Per Unit */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="amountInvested" className="block text-sm font-medium mb-1">
-                  Amount Invested ({purchaseCurrency})
-                </label>
-                <input
-                  type="number"
-                  id="amountInvested"
-                  required
-                  min="0"
-                  step="any"
-                  className="input mt-1"
-                  placeholder="e.g. 500"
-                  value={amountInvested}
-                  onChange={(e) => setAmountInvested(e.target.value)}
-                />
-              </div>
-              <div>
-                <label htmlFor="pricePerUnit" className="block text-sm font-medium mb-1">
-                  Price / {unitLabel.replace(/s$/, '')} ({purchaseCurrency})
-                </label>
-                <input
-                  type="number"
-                  id="pricePerUnit"
-                  required
-                  min="0"
-                  step="any"
-                  className="input mt-1"
-                  placeholder="e.g. 175.50"
-                  value={pricePerUnit}
-                  onChange={(e) => setPricePerUnit(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Auto-calculated quantity */}
-            <div className="bg-gray-800/50 rounded-lg p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-400">Quantity ({unitLabel})</span>
-                <span className="text-sm font-medium dark:text-white">
-                  {quantity ? `${quantity} ${unitLabel}` : '—'}
-                </span>
-              </div>
-              {sarEquivalent && (
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-xs text-gray-500">SAR equivalent</span>
-                  <span className="text-xs text-blue-400">
-                    SAR {formatMoney(sarEquivalent)}
-                    <span className="text-gray-600 ml-1">(@ {usdToSarRate})</span>
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="date" className="block text-sm font-medium mb-1">Purchase Date</label>
-              <input
-                type="date"
-                name="date"
-                id="date"
-                required
-                className="input mt-1"
-                defaultValue={editingLot?.date
-                  ? new Date(editingLot.date).toISOString().split('T')[0]
-                  : new Date().toISOString().split('T')[0]
-                }
-              />
-            </div>
-
-            {/* Manual valuation toggle */}
-            <div className="flex items-center gap-3">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useManualVal}
-                  onChange={(e) => setUseManualVal(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-              <span className="text-sm">Manual valuation (no API price lookup)</span>
-            </div>
-
-            {useManualVal && (
-              <div>
-                <label htmlFor="manualCurrentValue" className="block text-sm font-medium mb-1">
-                  Current Value ({purchaseCurrency})
-                </label>
-                <input
-                  type="number"
-                  name="manualCurrentValue"
-                  id="manualCurrentValue"
-                  min="0"
-                  step="any"
-                  className="input mt-1"
-                  placeholder="Leave empty to use cost basis"
-                  defaultValue={editingLot?.manualCurrentValue}
-                />
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium mb-1">
-                Notes <span className="text-gray-500">(optional)</span>
-              </label>
-              <textarea
-                name="notes"
-                id="notes"
-                className="input mt-1"
-                rows={2}
-                defaultValue={editingLot?.notes}
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button type="submit" className="btn btn-primary flex-1">
-                {editingLot ? 'Save Changes' : 'Add Lot'}
-              </button>
-              <button type="button" onClick={closeForm} className="btn btn-secondary">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Add/Edit Lot Form — only show at top for new positions */}
+      {showForm && !isExistingPosition && !editingLot && renderLotForm()}
 
       {/* Position Cards */}
       <div className="space-y-4">
@@ -773,6 +782,13 @@ export default function Investments() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Inline form for editing lot or adding to this position */}
+            {formTargetPositionKey === position.positionKey && (
+              <div className="mt-4 border-t border-blue-500/30 pt-4">
+                {renderLotForm()}
               </div>
             )}
           </div>

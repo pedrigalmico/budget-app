@@ -75,74 +75,139 @@ export function isCommodityTicker(ticker: string): boolean {
 }
 
 /**
- * Fetches commodity prices (gold, silver, etc.) from Alpha Vantage
- * using the CURRENCY_EXCHANGE_RATE endpoint.
+ * Try CURRENCY_EXCHANGE_RATE endpoint first (real-time spot price).
+ * Returns price per troy ounce in USD, or null on failure.
+ */
+async function tryExchangeRate(apiSymbol: string, apiKey: string): Promise<number | null> {
+  try {
+    const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${apiSymbol}&to_currency=USD&apikey=${encodeURIComponent(apiKey)}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data['Note'] || data['Information'] || data['Error Message']) {
+      console.warn(`[PriceService] CURRENCY_EXCHANGE_RATE failed for ${apiSymbol}:`,
+        data['Note'] || data['Information'] || data['Error Message']);
+      return null;
+    }
+
+    const exchangeRate = data['Realtime Currency Exchange Rate'];
+    const price = exchangeRate ? parseFloat(exchangeRate['5. Exchange Rate']) : NaN;
+    return isNaN(price) ? null : price;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fallback: FX_DAILY endpoint — returns most recent daily close price per troy ounce.
+ */
+async function tryFxDaily(apiSymbol: string, apiKey: string): Promise<number | null> {
+  try {
+    const url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${apiSymbol}&to_symbol=USD&outputsize=compact&apikey=${encodeURIComponent(apiKey)}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data['Note'] || data['Information'] || data['Error Message']) {
+      console.warn(`[PriceService] FX_DAILY failed for ${apiSymbol}:`,
+        data['Note'] || data['Information'] || data['Error Message']);
+      return null;
+    }
+
+    const timeSeries = data['Time Series FX (Daily)'];
+    if (!timeSeries) return null;
+
+    // Get the most recent date's close price
+    const dates = Object.keys(timeSeries).sort().reverse();
+    if (dates.length === 0) return null;
+
+    const price = parseFloat(timeSeries[dates[0]]['4. close']);
+    return isNaN(price) ? null : price;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Free fallback: metals.live API — no API key needed.
+ * Returns spot prices per troy ounce in USD for gold, silver, platinum, palladium.
+ */
+const METALS_LIVE_MAP: Record<string, string> = {
+  'XAU': 'gold',
+  'XAG': 'silver',
+  'XPT': 'platinum',
+  'XPD': 'palladium',
+};
+
+async function tryMetalsLive(apiSymbol: string): Promise<number | null> {
+  const metalKey = METALS_LIVE_MAP[apiSymbol];
+  if (!metalKey) return null;
+
+  try {
+    const response = await fetch('https://api.metals.live/v1/spot');
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    // Response is an array of objects like [{"gold": 3050.12}, {"silver": 25.45}, ...]
+    if (!Array.isArray(data)) return null;
+
+    for (const entry of data) {
+      if (entry[metalKey] !== undefined) {
+        const price = parseFloat(entry[metalKey]);
+        return isNaN(price) ? null : price;
+      }
+    }
+    return null;
+  } catch (e) {
+    console.warn(`[PriceService] metals.live fallback failed:`, e);
+    return null;
+  }
+}
+
+/**
+ * Fetches commodity prices (gold, silver, etc.).
+ * Tries Alpha Vantage first, then free metals.live API as fallback.
  * Returns price per GRAM in USD.
  */
 export async function fetchCommodityPrice(
   ticker: string,
   apiKey: string
 ): Promise<PriceCacheEntry | null> {
-  try {
-    const commodity = resolveCommodity(ticker.toUpperCase());
-    if (!commodity) {
-      console.error(`[PriceService] Unknown commodity ticker "${ticker}"`);
-      return null;
-    }
-
-    const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${commodity.apiSymbol}&to_currency=USD&apikey=${encodeURIComponent(apiKey)}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error(`[PriceService] HTTP ${response.status} for ${ticker}`);
-      return null;
-    }
-
-    const data = await response.json();
-
-    // Alpha Vantage uses different error fields depending on the issue
-    if (data['Note']) {
-      console.warn('[PriceService] API rate limit reached:', data['Note']);
-      return null;
-    }
-
-    if (data['Information']) {
-      console.warn('[PriceService] API info/limit:', data['Information']);
-      return null;
-    }
-
-    if (data['Error Message']) {
-      console.error(`[PriceService] Invalid commodity "${ticker}":`, data['Error Message']);
-      return null;
-    }
-
-    console.log(`[PriceService] Raw response for ${ticker}:`, JSON.stringify(data));
-
-    const exchangeRate = data['Realtime Currency Exchange Rate'];
-    if (!exchangeRate || !exchangeRate['5. Exchange Rate']) {
-      console.warn(`[PriceService] No price data for commodity "${ticker}"`);
-      return null;
-    }
-
-    const pricePerOz = parseFloat(exchangeRate['5. Exchange Rate']);
-    if (isNaN(pricePerOz)) {
-      console.warn(`[PriceService] Invalid price for "${ticker}":`, exchangeRate['5. Exchange Rate']);
-      return null;
-    }
-
-    // Convert from per troy ounce to per gram, then apply purity
-    const pricePerGram = (pricePerOz / commodity.gramsPerOz) * commodity.purity;
-
-    return {
-      price: pricePerGram,
-      currency: 'USD',
-      lastUpdated: new Date().toISOString(),
-      source: 'Alpha Vantage',
-    };
-  } catch (error) {
-    console.error(`[PriceService] Failed to fetch commodity price for "${ticker}":`, error);
+  const commodity = resolveCommodity(ticker.toUpperCase());
+  if (!commodity) {
+    console.error(`[PriceService] Unknown commodity ticker "${ticker}"`);
     return null;
   }
+
+  // Try Alpha Vantage real-time endpoint first, then daily fallback
+  let pricePerOz = await tryExchangeRate(commodity.apiSymbol, apiKey);
+
+  if (pricePerOz === null) {
+    console.log(`[PriceService] Trying FX_DAILY fallback for ${commodity.apiSymbol}...`);
+    pricePerOz = await tryFxDaily(commodity.apiSymbol, apiKey);
+  }
+
+  // Free fallback: metals.live API (no API key needed)
+  if (pricePerOz === null) {
+    console.log(`[PriceService] Trying metals.live fallback for ${commodity.apiSymbol}...`);
+    pricePerOz = await tryMetalsLive(commodity.apiSymbol);
+  }
+
+  if (pricePerOz === null) {
+    console.error(`[PriceService] All endpoints failed for commodity "${ticker}"`);
+    return null;
+  }
+
+  // Convert from per troy ounce to per gram, then apply purity
+  const pricePerGram = (pricePerOz / commodity.gramsPerOz) * commodity.purity;
+
+  return {
+    price: pricePerGram,
+    currency: 'USD',
+    lastUpdated: new Date().toISOString(),
+    source: 'metals.live',
+  };
 }
 
 /**
@@ -242,35 +307,34 @@ export async function fetchMultiplePrices(
     callIndex++;
 
     // Make ONE API call for the base commodity (e.g. XAU)
+    // Try CURRENCY_EXCHANGE_RATE first, fall back to FX_DAILY
     try {
-      const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${apiSymbol}&to_currency=USD&apikey=${encodeURIComponent(apiKey)}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      console.log(`[PriceService] Commodity batch ${apiSymbol} response:`, JSON.stringify(data));
-
-      // Check for rate limit / info messages
-      if (data['Note'] || data['Information']) {
-        console.warn(`[PriceService] API limit for ${apiSymbol}:`, data['Note'] || data['Information']);
+      let pricePerOz = await tryExchangeRate(apiSymbol, apiKey);
+      if (pricePerOz === null) {
+        console.log(`[PriceService] Trying FX_DAILY fallback for batch ${apiSymbol}...`);
+        pricePerOz = await tryFxDaily(apiSymbol, apiKey);
       }
 
-      const exchangeRate = data['Realtime Currency Exchange Rate'];
-      if (exchangeRate && exchangeRate['5. Exchange Rate']) {
-        const pricePerOz = parseFloat(exchangeRate['5. Exchange Rate']);
+      // Free fallback: metals.live API
+      if (pricePerOz === null) {
+        console.log(`[PriceService] Trying metals.live fallback for batch ${apiSymbol}...`);
+        pricePerOz = await tryMetalsLive(apiSymbol);
+      }
 
-        if (!isNaN(pricePerOz)) {
-          // Derive price for each variant (24K, 18K, etc.) from the same raw price
-          for (const ticker of groupTickers) {
-            const commodity = resolveCommodity(ticker.toUpperCase())!;
-            const pricePerGram = (pricePerOz / commodity.gramsPerOz) * commodity.purity;
-            results[ticker] = {
-              price: pricePerGram,
-              currency: 'USD',
-              lastUpdated: new Date().toISOString(),
-              source: 'Alpha Vantage',
-            };
-          }
+      if (pricePerOz !== null) {
+        // Derive price for each variant (24K, 18K, etc.) from the same raw price
+        for (const ticker of groupTickers) {
+          const commodity = resolveCommodity(ticker.toUpperCase())!;
+          const pricePerGram = (pricePerOz / commodity.gramsPerOz) * commodity.purity;
+          results[ticker] = {
+            price: pricePerGram,
+            currency: 'USD',
+            lastUpdated: new Date().toISOString(),
+            source: 'metals.live',
+          };
         }
+      } else {
+        console.error(`[PriceService] All endpoints failed for commodity batch ${apiSymbol}`);
       }
     } catch (error) {
       console.error(`[PriceService] Failed to fetch commodity ${apiSymbol}:`, error);

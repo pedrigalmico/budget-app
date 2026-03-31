@@ -113,6 +113,130 @@ export default function Expenses() {
   // Helper for today's date in yyyy-mm-dd
   const today = new Date().toISOString().slice(0, 10);
 
+  const renderExpenseForm = () => (
+    <div className="card">
+      <h2 className="text-lg font-semibold mb-4 dark:text-white">
+        {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+      </h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="amount" className="block text-sm font-medium mb-1">
+            Amount ({state.settings.currency})
+          </label>
+          <input
+            type="number"
+            name="amount"
+            id="amount"
+            required
+            min="0"
+            step="0.01"
+            className="input mt-1"
+            defaultValue={editingExpense?.amount}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="category" className="block text-sm font-medium mb-1">
+            Category
+          </label>
+          <select
+            name="category"
+            id="category"
+            required
+            className="input mt-1"
+            defaultValue={editingExpense?.category}
+          >
+            {allCategories.map(category => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="date" className="block text-sm font-medium mb-1">
+            Date
+          </label>
+          <input
+            type="date"
+            name="date"
+            id="date"
+            required
+            className="input mt-1"
+            defaultValue={editingExpense?.date || today}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="note" className="block text-sm font-medium mb-1">
+            Note (Optional)
+          </label>
+          <input
+            type="text"
+            name="note"
+            id="note"
+            className="input mt-1"
+            defaultValue={editingExpense?.note}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Account Type
+          </label>
+          <div className="flex gap-4 mt-1">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="accountType"
+                value="credit"
+                required
+                defaultChecked={editingExpense ? editingExpense.accountType === 'credit' : true}
+              />
+              Credit
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="accountType"
+                value="debit"
+                required
+                defaultChecked={editingExpense ? editingExpense.accountType === 'debit' : false}
+              />
+              Debit
+            </label>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button type="submit" className="btn btn-primary flex-1">
+            {editingExpense ? 'Save Changes' : 'Add Expense'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowForm(false);
+              setEditingExpense(null);
+            }}
+            className="btn btn-secondary"
+          >
+            Cancel
+          </button>
+        </div>
+        {editingExpense && (
+          <button
+            type="button"
+            onClick={() => handleDelete(editingExpense.id)}
+            className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
+          >
+            <FaTrash /> Delete Expense
+          </button>
+        )}
+      </form>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center mb-6">
@@ -128,130 +252,8 @@ export default function Expenses() {
         </button>
       </div>
 
-      {/* Add Expense Form */}
-      {showForm && (
-        <div className="card">
-          <h2 className="text-lg font-semibold mb-4 dark:text-white">
-            {editingExpense ? 'Edit Expense' : 'Add New Expense'}
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="amount" className="block text-sm font-medium mb-1">
-                Amount ({state.settings.currency})
-              </label>
-              <input
-                type="number"
-                name="amount"
-                id="amount"
-                required
-                min="0"
-                step="0.01"
-                className="input mt-1"
-                defaultValue={editingExpense?.amount}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium mb-1">
-                Category
-              </label>
-              <select 
-                name="category" 
-                id="category" 
-                required 
-                className="input mt-1"
-                defaultValue={editingExpense?.category}
-              >
-                {allCategories.map(category => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="date" className="block text-sm font-medium mb-1">
-                Date
-              </label>
-              <input
-                type="date"
-                name="date"
-                id="date"
-                required
-                className="input mt-1"
-                defaultValue={editingExpense?.date || today}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="note" className="block text-sm font-medium mb-1">
-                Note (Optional)
-              </label>
-              <input
-                type="text"
-                name="note"
-                id="note"
-                className="input mt-1"
-                defaultValue={editingExpense?.note}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Account Type
-              </label>
-              <div className="flex gap-4 mt-1">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="accountType"
-                    value="credit"
-                    required
-                    defaultChecked={editingExpense ? editingExpense.accountType === 'credit' : true}
-                  />
-                  Credit
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="accountType"
-                    value="debit"
-                    required
-                    defaultChecked={editingExpense ? editingExpense.accountType === 'debit' : false}
-                  />
-                  Debit
-                </label>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button type="submit" className="btn btn-primary flex-1">
-                {editingExpense ? 'Save Changes' : 'Add Expense'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingExpense(null);
-                }}
-                className="btn btn-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-            {editingExpense && (
-              <button
-                type="button"
-                onClick={() => handleDelete(editingExpense.id)}
-                className="btn bg-red-600 hover:bg-red-700 text-white w-full flex items-center justify-center gap-2 mt-6"
-              >
-                <FaTrash /> Delete Expense
-              </button>
-            )}
-          </form>
-        </div>
-      )}
+      {/* Add Expense Form — only show at top for new expenses */}
+      {showForm && !editingExpense && renderExpenseForm()}
 
       {/* Search Bar */}
       <input
@@ -388,31 +390,39 @@ export default function Expenses() {
       {/* Expenses List */}
       <div className="space-y-4">
         {filteredExpenses.map((expense: ExpenseType) => (
-          <div key={expense.id} className="card">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-medium dark:text-white">{expense.category}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {new Date(expense.date).toLocaleDateString()}
-                  {expense.note && ` - ${expense.note}`}
-                  {` - ${(expense.accountType ? expense.accountType.charAt(0).toUpperCase() + expense.accountType.slice(1) : 'N/A')}`}
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="text-right">
-                  <div className="font-semibold dark:text-white">
-                    {state.settings.currency} {formatMoney(expense.amount)}
+          <div key={expense.id}>
+            <div className="card">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium dark:text-white">{expense.category}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {new Date(expense.date).toLocaleDateString()}
+                    {expense.note && ` - ${expense.note}`}
+                    {` - ${(expense.accountType ? expense.accountType.charAt(0).toUpperCase() + expense.accountType.slice(1) : 'N/A')}`}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleEdit(expense)}
-                  className="btn btn-secondary p-2"
-                  title="Edit"
-                >
-                  <FaEdit />
-                </button>
+                <div className="flex items-start gap-4">
+                  <div className="text-right">
+                    <div className="font-semibold dark:text-white">
+                      {state.settings.currency} {formatMoney(expense.amount)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleEdit(expense)}
+                    className="btn btn-secondary p-2"
+                    title="Edit"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
               </div>
             </div>
+            {/* Inline edit form for this expense */}
+            {showForm && editingExpense?.id === expense.id && (
+              <div className="mt-2">
+                {renderExpenseForm()}
+              </div>
+            )}
           </div>
         ))}
         {filteredExpenses.length === 0 && (
