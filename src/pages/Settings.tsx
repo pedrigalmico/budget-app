@@ -345,7 +345,8 @@ export default function Settings() {
 
             <div>
               <label htmlFor="alphaVantageApiKey" className="block text-sm font-medium mb-1">
-                Alpha Vantage API Key <span className="text-gray-500">(for stock/ETF prices)</span>
+                Alpha Vantage API Key{' '}
+                <span className="text-gray-500">(stocks &amp; ETFs only — not needed for gold)</span>
               </label>
               <input
                 type="text"
@@ -356,7 +357,8 @@ export default function Settings() {
                 defaultValue={state.settings.alphaVantageApiKey || ''}
               />
               <p className="text-xs text-gray-500 mt-1">
-                Free tier: 25 API calls/day. Used for stock and ETF price updates.
+                Only required for stock/ETF prices (25 calls/day free).{' '}
+                <strong className="text-gray-400">Gold &amp; silver prices use metals.live → Yahoo Finance → ExchangeRate-API — no key needed.</strong>
               </p>
             </div>
 

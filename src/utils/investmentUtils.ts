@@ -73,13 +73,19 @@ export function groupLotsIntoPositions(
       currentValue = manualTotal;
       currentPricePerUnit =
         totalQuantity > 0 ? manualTotal / totalQuantity : undefined;
-    } else if (firstLot.ticker && priceCache?.[firstLot.ticker]) {
-      // API prices are in USD — convert to display currency
-      const apiPrice = priceCache[firstLot.ticker].price;
-      const apiCurrency = priceCache[firstLot.ticker].currency || 'USD';
-      const apiRate = (apiCurrency === 'USD' && currency === 'SAR') ? rate : 1;
-      currentPricePerUnit = apiPrice * apiRate;
-      currentValue = currentPricePerUnit * totalQuantity;
+    } else {
+      // Look up price cache: prefer ticker (API/auto), fall back to positionKey (manual)
+      const cacheKey = (firstLot.ticker && priceCache?.[firstLot.ticker])
+        ? firstLot.ticker
+        : positionKey;
+      const cached = priceCache?.[cacheKey];
+      if (cached) {
+        const cachedCurrency = cached.currency || 'USD';
+        // Manual prices stored in display currency need no conversion
+        const apiRate = (cachedCurrency === 'USD' && currency === 'SAR') ? rate : 1;
+        currentPricePerUnit = cached.price * apiRate;
+        currentValue = currentPricePerUnit * totalQuantity;
+      }
     }
 
     let returnAmount: number | undefined;
