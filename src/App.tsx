@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
+
+const IS_DEMO = (window as any).__DEMO_MODE__ === true;
 import { useAppState } from './hooks/useAppState';
 import {
   FaHome, FaCog, FaWallet, FaArrowUp, FaBullseye, FaChartLine, FaChartPie, FaSignOutAlt,
@@ -126,11 +128,37 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function DemoBanner() {
+  if (!IS_DEMO) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 9999,
+      background: '#FF6B35',
+      color: '#fff',
+      textAlign: 'center',
+      fontSize: '12px',
+      fontWeight: 600,
+      letterSpacing: '0.04em',
+      padding: '5px 12px',
+      pointerEvents: 'none',
+    }}>
+      DEMO MODE — Sample data only. No account required.
+    </div>
+  );
+}
+
 function AuthedShell({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <DemoBanner />
       <Sidebar />
-      <main className="page-container animate-fade-in">{children}</main>
+      <main className="page-container animate-fade-in" style={IS_DEMO ? { paddingTop: 'calc(var(--pt, 0px) + 26px)' } : undefined}>
+        {children}
+      </main>
       <MobileNav />
     </>
   );

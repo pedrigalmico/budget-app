@@ -9,6 +9,15 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
+// Read once at module load — set synchronously in main.tsx before React mounts.
+const IS_DEMO = (window as any).__DEMO_MODE__ === true;
+
+const DEMO_USER = {
+  uid: 'demo-user-public',
+  email: 'demo@mikaifinance.com',
+  displayName: 'Demo User',
+} as unknown as User;
+
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
@@ -28,10 +37,14 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // In demo mode: start with demo user pre-loaded, loading=false.
+  const [currentUser, setCurrentUser] = useState<User | null>(IS_DEMO ? DEMO_USER : null);
+  const [loading, setLoading] = useState(!IS_DEMO);
 
   useEffect(() => {
+    // Skip Firebase auth entirely in demo mode — no network calls.
+    if (IS_DEMO) return;
+
     const unsubscribe = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
       setLoading(false);
@@ -69,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout(): Promise<void> {
+    if (IS_DEMO) return; // Can't sign out of a demo session.
     try {
       setLoading(true);
       await signOut(auth);

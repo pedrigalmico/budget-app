@@ -3,6 +3,10 @@ import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { AppState } from '../types';
+import { DEMO_STATE } from '../demo/demoData';
+
+// Read once at module load — set synchronously in main.tsx before React mounts.
+const IS_DEMO = (window as any).__DEMO_MODE__ === true;
 
 /**
  * Migrate legacy flat Investment records to the new InvestmentLot format.
@@ -56,14 +60,16 @@ function migrateInvestments(data: any): any {
 
 export function useFirestore() {
   const { currentUser } = useAuth();
-  const [data, setData] = useState<AppState | null>(null);
+  // In demo mode seed the state immediately — no Firestore calls ever.
+  const [data, setData] = useState<AppState | null>(IS_DEMO ? DEMO_STATE : null);
   const [error, setError] = useState<string | null>(null);
   const lastUpdate = useRef<string>('');
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Load initial data and subscribe to updates
   useEffect(() => {
-    if (!currentUser) {
+    // Skip Firestore entirely in demo mode.
+    if (IS_DEMO || !currentUser) {
       return;
     }
 
@@ -146,6 +152,12 @@ export function useFirestore() {
   };
 
   const updateData = async (newData: AppState) => {
+    // In demo mode: apply changes to local state only, skip Firestore writes.
+    if (IS_DEMO) {
+      setData(newData);
+      return;
+    }
+
     if (!currentUser) {
       return;
     }
