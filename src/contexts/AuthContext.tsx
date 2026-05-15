@@ -9,8 +9,8 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
-// Read once at module load — set synchronously in main.tsx before React mounts.
-const IS_DEMO = (window as any).__DEMO_MODE__ === true;
+// This is the demo/public-embed branch — always in demo mode.
+const IS_DEMO = true;
 
 const DEMO_USER = {
   uid: 'demo-user-public',

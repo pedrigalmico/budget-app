@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
 
-const IS_DEMO = (window as any).__DEMO_MODE__ === true;
+// This is the demo/public-embed branch — always in demo mode.
+const IS_DEMO = true;
 import { useAppState } from './hooks/useAppState';
 import {
   FaHome, FaCog, FaWallet, FaArrowUp, FaBullseye, FaChartLine, FaChartPie, FaSignOutAlt,

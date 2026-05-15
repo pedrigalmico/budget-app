@@ -2,24 +2,31 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, Expense, Goal, InvestmentLot, Settings, Income, PriceCache } from '../types';
 import { useFirestore } from './useFirestore';
 import { useLoading } from '../contexts/LoadingContext';
+import { DEMO_STATE } from '../demo/demoData';
+
+// This is the demo/public-embed branch — always in demo mode.
+const IS_DEMO = true;
+
+const EMPTY_STATE: AppState = {
+  expenses: [],
+  goals: [],
+  investments: [],
+  incomes: [],
+  settings: {
+    monthlyIncome: 0,
+    currency: 'SAR',
+    darkMode: false,
+    customCategories: [],
+    categoryBudgets: {},
+    usdToSarRate: 3.75
+  }
+};
 
 export const useAppState = () => {
   const { data: firestoreData, updateData } = useFirestore();
   const { setIsLoading } = useLoading();
-  const [state, setState] = useState<AppState>(() => ({
-    expenses: [],
-    goals: [],
-    investments: [],
-    incomes: [],
-    settings: {
-      monthlyIncome: 0,
-      currency: 'SAR',
-      darkMode: false,
-      customCategories: [],
-      categoryBudgets: {},
-      usdToSarRate: 3.75
-    }
-  }));
+  // In demo mode seed state immediately so first render has real data.
+  const [state, setState] = useState<AppState>(() => IS_DEMO ? DEMO_STATE : EMPTY_STATE);
 
   const pendingUpdates = useRef<NodeJS.Timeout | null>(null);
   const pendingData = useRef<AppState | null>(null);
