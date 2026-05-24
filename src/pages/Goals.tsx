@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Goal, Contribution } from '../types';
-import { FaPlus, FaEdit, FaPiggyBank, FaTrash, FaChevronDown, FaChevronUp, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaPiggyBank, FaTrash, FaChevronDown, FaChevronUp, FaTimes, FaMinus } from 'react-icons/fa';
 
 export default function Goals() {
   const { state, addGoal, updateGoal, formatMoney, deleteGoal } = useAppState();
@@ -11,6 +11,7 @@ export default function Goals() {
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
   const [editingContribution, setEditingContribution] = useState<{ goalId: string; index: number; contribution: Contribution } | null>(null);
+  const [contributionType, setContributionType] = useState<'deposit' | 'withdrawal'>('deposit');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,7 +51,8 @@ export default function Goals() {
 
     if (!selectedGoal) return;
 
-    const contributionAmount = parseFloat(formData.get('amount') as string);
+    const rawAmount = parseFloat(formData.get('amount') as string);
+    const contributionAmount = contributionType === 'withdrawal' ? -rawAmount : rawAmount;
     const contributionDate = formData.get('date') as string;
     const contributionNote = formData.get('note') as string || undefined;
 
@@ -95,6 +97,7 @@ export default function Goals() {
 
     setShowContributionForm(false);
     setSelectedGoal(null);
+    setContributionType('deposit');
     form.reset();
   };
 
@@ -116,6 +119,7 @@ export default function Goals() {
   const handleEditContribution = (goal: Goal, contributionIndex: number) => {
     const contribution = goal.contributions![contributionIndex];
     setSelectedGoal(goal);
+    setContributionType(contribution.amount < 0 ? 'withdrawal' : 'deposit');
     setEditingContribution({ goalId: goal.id, index: contributionIndex, contribution });
     setShowContributionForm(true);
   };
@@ -279,6 +283,7 @@ export default function Goals() {
                       onClick={() => {
                         setSelectedGoal(goal);
                         setEditingContribution(null);
+                        setContributionType('deposit');
                         setShowContributionForm(true);
                       }}
                       className="btn btn-primary p-2"
@@ -334,7 +339,7 @@ export default function Goals() {
                       className="flex items-center justify-between w-full text-sm text-gray-300 hover:text-white transition-colors"
                     >
                       <span className="font-medium">
-                        Contributions ({contributionCount})
+                        Transactions ({contributionCount})
                       </span>
                       {isExpanded ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />}
                     </button>
@@ -354,8 +359,8 @@ export default function Goals() {
                                   )}
                                 </div>
                               </div>
-                              <span className="text-green-400 font-medium ml-3">
-                                +{state.settings.currency} {formatMoney(contribution.amount)}
+                              <span className={`${contribution.amount < 0 ? 'text-red-400' : 'text-green-400'} font-medium ml-3`}>
+                                {contribution.amount < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(contribution.amount))}
                               </span>
                             </div>
                           );
@@ -379,10 +384,10 @@ export default function Goals() {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 ml-3">
-                                <span className="text-green-400 font-medium">
-                                  +{state.settings.currency} {formatMoney(contribution.amount)}
+                                <span className={`${contribution.amount < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
+                                  {contribution.amount < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(contribution.amount))}
                                 </span>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-1">
                                   <button
                                     onClick={() => handleEditContribution(goal, actualIndex)}
                                     className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
@@ -433,10 +438,36 @@ export default function Goals() {
                 <FaTimes />
               </button>
               <h2 className="text-lg font-semibold mb-1 dark:text-white">
-                {editingContribution ? 'Edit Contribution' : 'Add Contribution'}
+                {editingContribution ? 'Edit Entry' : contributionType === 'deposit' ? 'Add Deposit' : 'Record Withdrawal'}
               </h2>
               <p className="text-sm text-gray-400 mb-4">{selectedGoal.name}</p>
               <form onSubmit={handleContribution} className="space-y-4">
+                {/* Deposit / Withdrawal Toggle */}
+                <div className="flex rounded-lg overflow-hidden border border-gray-600">
+                  <button
+                    type="button"
+                    onClick={() => setContributionType('deposit')}
+                    className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                      contributionType === 'deposit'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <FaPlus className="text-xs" /> Deposit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContributionType('withdrawal')}
+                    className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                      contributionType === 'withdrawal'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <FaMinus className="text-xs" /> Withdrawal
+                  </button>
+                </div>
+
                 <div>
                   <label htmlFor="contribution-amount" className="block text-sm font-medium mb-1">
                     Amount ({state.settings.currency})
@@ -446,11 +477,11 @@ export default function Goals() {
                     name="amount"
                     id="contribution-amount"
                     required
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     className="input"
-                    placeholder="Enter contribution amount"
-                    defaultValue={editingContribution?.contribution.amount}
+                    placeholder={contributionType === 'deposit' ? 'Enter deposit amount' : 'Enter withdrawal amount'}
+                    defaultValue={editingContribution ? Math.abs(editingContribution.contribution.amount) : undefined}
                   />
                 </div>
 
@@ -483,8 +514,8 @@ export default function Goals() {
                 </div>
 
                 <div className="flex gap-2">
-                  <button type="submit" className="btn btn-primary flex-1">
-                    {editingContribution ? 'Save Changes' : 'Add Contribution'}
+                  <button type="submit" className={`btn flex-1 text-white ${contributionType === 'withdrawal' ? 'bg-red-600 hover:bg-red-700' : 'btn-primary'}`}>
+                    {editingContribution ? 'Save Changes' : contributionType === 'deposit' ? 'Add Deposit' : 'Record Withdrawal'}
                   </button>
                   <button
                     type="button"
