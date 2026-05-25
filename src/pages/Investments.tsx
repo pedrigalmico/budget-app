@@ -463,8 +463,9 @@ export default function Investments() {
   // ── main render ───────────────────────────────────────────────────
   return (
     <div className="space-y-6 pb-20">
+      <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h1>Investments</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Investments</h1>
         <button onClick={handleNewPosition} className="btn btn-primary">
           <FaPlus size={12} /> Add Lot
         </button>
@@ -668,6 +669,7 @@ export default function Investments() {
             <button onClick={handleNewPosition} className="btn btn-primary mt-4">Add your first investment</button>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

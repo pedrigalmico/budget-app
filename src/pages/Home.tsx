@@ -258,15 +258,15 @@ export default function Home() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold dark:text-white">Welcome Back, MiKai</h1>
           {/* Empty div for consistent spacing when there's no right-aligned element */}
           <div className="w-10"></div>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => navigate('/income')}
             className="relative card min-h-[100px] flex flex-col justify-between text-left transition-all hover:scale-105 hover:shadow-lg active:scale-100 border border-transparent hover:border-emerald-500/50 overflow-hidden group"

@@ -233,8 +233,8 @@ export default function Income() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold dark:text-white">Income Sources</h1>
           <button
             onClick={() => setShowForm(true)}
@@ -267,28 +267,35 @@ export default function Income() {
         {showForm && !editingIncome && renderIncomeForm()}
 
         {/* Income List */}
-        <div className="space-y-4">
-          {state.incomes.map(income => (
+        <div className="space-y-3">
+          {[...state.incomes]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .map(income => (
             <div key={income.id}>
               <div className="card">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium">{income.name}</h3>
-                    <div className="text-sm text-gray-400">
-                      {income.type} • {income.frequency}
+                <div className="flex justify-between items-center">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate">{income.name}</h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 shrink-0">
+                        {income.type}
+                      </span>
                     </div>
-                    {income.note && (
-                      <div className="mt-1 text-sm text-gray-400">{income.note}</div>
-                    )}
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                      <span>{new Date(income.date).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>{income.frequency}{income.isRecurring ? ' ↻' : ''}</span>
+                      {income.note && (
+                        <>
+                          <span>•</span>
+                          <span className="truncate">{income.note}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="text-right">
-                      <div className="font-semibold text-green-500">
-                        {state.settings.currency} {formatMoney(income.amount)}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {new Date(income.date).toLocaleDateString()}
-                      </div>
+                  <div className="flex items-center gap-3 ml-3">
+                    <div className="font-semibold text-green-500 text-right whitespace-nowrap">
+                      {state.settings.currency} {formatMoney(income.amount)}
                     </div>
                     <button
                       onClick={() => handleEdit(income)}
@@ -299,7 +306,6 @@ export default function Income() {
                   </div>
                 </div>
               </div>
-              {/* Inline edit form for this income */}
               {showForm && editingIncome?.id === income.id && (
                 <div className="mt-2">
                   {renderIncomeForm()}

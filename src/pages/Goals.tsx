@@ -147,8 +147,8 @@ export default function Goals() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold dark:text-white">Savings Goals</h1>
           <button
             onClick={() => {

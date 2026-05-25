@@ -239,7 +239,8 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="flex justify-between items-center mb-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold dark:text-white">Expenses</h1>
         <button
           onClick={() => {
@@ -255,33 +256,33 @@ export default function Expenses() {
       {/* Add Expense Form — only show at top for new expenses */}
       {showForm && !editingExpense && renderExpenseForm()}
 
-      {/* Search Bar */}
-      <input
-        type="text"
-        placeholder="Search expenses by note or category..."
-        className="input mb-4"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-
-      {/* Month Filter */}
-      <div className="flex gap-4 items-center">
+      {/* Search & Filters */}
+      <div className="space-y-3">
         <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
+          type="text"
+          placeholder="Search expenses by note or category..."
           className="input"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <select
-          className="input"
-          value={selectedCategory}
-          onChange={e => setSelectedCategory(e.target.value)}
-        >
-          <option value="All">All Categories</option>
-          {allCategories.map(category => (
-            <option key={category} value={category}>{category}</option>
-          ))}
-        </select>
+        <div className="flex gap-3 items-center">
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="input"
+          />
+          <select
+            className="input"
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+          >
+            <option value="All">All Categories</option>
+            {allCategories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Monthly Total Card with Budget Limits */}
@@ -430,6 +431,7 @@ export default function Expenses() {
             No expenses found for this month.
           </p>
         )}
+      </div>
       </div>
     </div>
   );

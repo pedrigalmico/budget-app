@@ -302,8 +302,8 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold dark:text-white">Settings</h1>
         </div>
 
@@ -391,37 +391,29 @@ export default function Settings() {
           <h2 className="text-lg font-semibold">Expense Categories</h2>
           <div className="card">
             <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium mb-2">Default Categories</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {activeDefaultCategories.map(category => (
-                    <div key={category} className="flex justify-between items-center text-sm p-2 bg-gray-800 rounded">
-                      <span>{category}</span>
-                      <button
-                        onClick={() => handleRemoveDefaultCategory(category)}
-                        className="text-red-500 hover:text-red-400"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="grid grid-cols-2 gap-2">
-                  {(state.settings.customCategories || []).map(category => (
-                    <div key={category.id} className="flex justify-between items-center text-sm p-2 bg-gray-800 rounded">
-                      <span>{category.name}</span>
-                      <button
-                        onClick={() => handleRemoveCategory(category.id)}
-                        className="text-red-500 hover:text-red-400"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {activeDefaultCategories.map(category => (
+                  <span key={category} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-gray-800 rounded-full">
+                    {category}
+                    <button
+                      onClick={() => handleRemoveDefaultCategory(category)}
+                      className="text-gray-500 hover:text-red-400 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {(state.settings.customCategories || []).map(category => (
+                  <span key={category.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-blue-900/40 border border-blue-700/50 rounded-full">
+                    {category.name}
+                    <button
+                      onClick={() => handleRemoveCategory(category.id)}
+                      className="text-gray-500 hover:text-red-400 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
               </div>
 
               <form onSubmit={handleAddCategory} className="flex gap-2">

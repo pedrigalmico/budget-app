@@ -181,9 +181,9 @@ export default function Reports() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-gray-100 dark:text-white">Reports</h1>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold dark:text-white">Reports</h1>
           <div className="flex gap-2">
             <select
               value={selectedMonth}
