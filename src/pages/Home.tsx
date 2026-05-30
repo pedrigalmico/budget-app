@@ -144,8 +144,9 @@ export default function Home() {
           .reduce((sum, inv) => sum + (Number(inv.quantity) || 0) * (Number(inv.pricePerUnit) || 0), 0);
 
         const monthGoals = state.goals
-          .filter(goal => goal.date.startsWith(monthPrefix))
-          .reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
+          .flatMap(goal => goal.contributions || [])
+          .filter(contribution => contribution.date.startsWith(monthPrefix))
+          .reduce((sum, contribution) => sum + contribution.amount, 0);
 
         data.push({
           date: monthStr,
