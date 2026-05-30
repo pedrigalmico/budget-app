@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { Goal, Contribution } from '../types';
-import { FaPlus, FaEdit, FaPiggyBank, FaTrash, FaChevronDown, FaChevronUp, FaTimes, FaMinus } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaPiggyBank, FaTrash, FaChevronDown, FaChevronUp, FaTimes, FaMinus, FaCalendarAlt } from 'react-icons/fa';
 
 export default function Goals() {
   const { state, addGoal, updateGoal, formatMoney, deleteGoal } = useAppState();
@@ -12,6 +12,19 @@ export default function Goals() {
   const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
   const [editingContribution, setEditingContribution] = useState<{ goalId: string; index: number; contribution: Contribution } | null>(null);
   const [contributionType, setContributionType] = useState<'deposit' | 'withdrawal'>('deposit');
+  const [filterMonth, setFilterMonth] = useState<string>('');
+
+  const isFiltering = !!filterMonth;
+  const monthLabel = filterMonth
+    ? new Date(`${filterMonth}-01T00:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    : '';
+  const monthlyContributions = isFiltering
+    ? state.goals.flatMap(g => (g.contributions || []).filter(c => c.date.startsWith(filterMonth)))
+    : [];
+  const monthlyTotal = monthlyContributions.reduce((sum, c) => sum + c.amount, 0);
+  const activeGoalsCount = isFiltering
+    ? state.goals.filter(g => (g.contributions || []).some(c => c.date.startsWith(filterMonth))).length
+    : 0;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -161,6 +174,38 @@ export default function Goals() {
           </button>
         </div>
 
+        {/* Month Filter */}
+        <div className="card flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <FaCalendarAlt className="text-gray-400 shrink-0" />
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="input"
+              aria-label="Filter contributions by month"
+            />
+            {isFiltering && (
+              <button
+                onClick={() => setFilterMonth('')}
+                className="btn btn-secondary p-2 shrink-0"
+                title="Clear filter"
+              >
+                <FaTimes />
+              </button>
+            )}
+          </div>
+          {isFiltering && (
+            <div className="text-sm sm:text-right">
+              <span className="text-gray-400">{monthLabel}: </span>
+              <span className={`${monthlyTotal < 0 ? 'text-red-400' : 'text-green-400'} font-semibold`}>
+                {monthlyTotal < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(monthlyTotal))}
+              </span>
+              <span className="text-gray-500"> across {activeGoalsCount} goal{activeGoalsCount !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>
+
         {/* Add Goal Form */}
         {showForm && (
           <div className="card">
@@ -265,6 +310,13 @@ export default function Goals() {
             const isExpanded = expandedGoalId === goal.id;
             const contributionCount = goal.contributions?.length || 0;
 
+            // Month-filtered entries (keep original index for edit/delete)
+            const monthEntries = (goal.contributions || [])
+              .map((c, i) => ({ c, i }))
+              .filter(({ c }) => c.date.startsWith(filterMonth));
+            if (isFiltering && monthEntries.length === 0) return null;
+            const goalMonthTotal = monthEntries.reduce((sum, { c }) => sum + c.amount, 0);
+
             return (
               <div key={goal.id} className="card">
                 {/* Goal Header */}
@@ -331,8 +383,57 @@ export default function Goals() {
                   )}
                 </div>
 
+                {/* Contributions Section — filtered month view */}
+                {isFiltering && (
+                  <div className="mt-4 border-t border-gray-700 pt-3">
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="font-medium text-gray-300">
+                        {monthLabel} ({monthEntries.length})
+                      </span>
+                      <span className={`${goalMonthTotal < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
+                        {goalMonthTotal < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(goalMonthTotal))}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {[...monthEntries].reverse().map(({ c: contribution, i: actualIndex }) => (
+                        <div key={actualIndex} className="flex items-center justify-between text-sm bg-gray-800/50 rounded-lg px-3 py-2 group">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
+                              {contribution.note && (
+                                <span className="text-gray-500 text-xs truncate">- {contribution.note}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 ml-3">
+                            <span className={`${contribution.amount < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
+                              {contribution.amount < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(contribution.amount))}
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleEditContribution(goal, actualIndex)}
+                                className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+                                title="Edit contribution"
+                              >
+                                <FaEdit className="text-xs" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteContribution(goal, actualIndex)}
+                                className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                                title="Delete contribution"
+                              >
+                                <FaTrash className="text-xs" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Contributions Section */}
-                {contributionCount > 0 && (
+                {!isFiltering && contributionCount > 0 && (
                   <div className="mt-4 border-t border-gray-700 pt-3">
                     <button
                       onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
@@ -419,6 +520,13 @@ export default function Goals() {
               <FaPiggyBank className="text-5xl text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400 text-lg">No savings goals yet</p>
               <p className="text-gray-500 text-sm mt-1">Add a goal to start tracking your savings!</p>
+            </div>
+          )}
+          {state.goals.length > 0 && isFiltering && activeGoalsCount === 0 && (
+            <div className="text-center py-12">
+              <FaCalendarAlt className="text-5xl text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">No contributions in {monthLabel}</p>
+              <p className="text-gray-500 text-sm mt-1">Try a different month or clear the filter.</p>
             </div>
           )}
         </div>
