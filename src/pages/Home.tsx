@@ -112,8 +112,9 @@ export default function Home() {
           .reduce((sum, inv) => sum + (Number(inv.quantity) || 0) * (Number(inv.pricePerUnit) || 0), 0);
 
         const dayGoals = state.goals
-          .filter(goal => goal.date.startsWith(dayStr))
-          .reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
+          .flatMap(goal => goal.contributions || [])
+          .filter(contribution => contribution.date.startsWith(dayStr))
+          .reduce((sum, contribution) => sum + contribution.amount, 0);
 
         data.push({
           date,
