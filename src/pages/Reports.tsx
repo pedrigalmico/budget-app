@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Income } from '../types';
@@ -16,23 +16,6 @@ const COLORS = [
   '#6366F1', // indigo
   '#84CC16'  // lime
 ];
-
-const formatNumber = (num: number): string => {
-  const absNum = Math.abs(num);
-  let formattedNum: string;
-
-  if (absNum >= 1000000000) {
-    formattedNum = (absNum / 1000000000).toFixed(1) + 'B';
-  } else if (absNum >= 1000000) {
-    formattedNum = (absNum / 1000000).toFixed(1) + 'M';
-  } else if (absNum >= 1000) {
-    formattedNum = (absNum / 1000).toFixed(1) + 'k';
-  } else {
-    formattedNum = absNum.toFixed(0);
-  }
-
-  return num < 0 ? `-${formattedNum}` : formattedNum;
-};
 
 interface CustomLabelProps {
   cx: number;
@@ -75,7 +58,7 @@ export default function Reports() {
 
   // Generate available years (5 years back from current year)
   const availableYears = useMemo(() => {
-    const currentYear = now.getFullYear();
+    const currentYear = new Date().getFullYear();
     return Array.from({ length: 6 }, (_, i) => currentYear - 5 + i);
   }, []);
 
@@ -183,12 +166,12 @@ export default function Reports() {
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold dark:text-white">Reports</h1>
+          <h1 className="text-2xl font-bold">Reports</h1>
           <div className="flex gap-2">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
+              className="bg-surface-200 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-ink-50"
             >
               {monthNames.map((month, index) => (
                 <option key={month} value={index}>{month}</option>
@@ -197,7 +180,7 @@ export default function Reports() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="bg-gray-800 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-gray-100"
+              className="bg-surface-200 text-sm rounded-lg px-3 py-1.5 border-none focus:ring-2 focus:ring-blue-500 text-ink-50"
             >
               {availableYears.map(year => (
                 <option key={year} value={year}>{year}</option>
@@ -207,13 +190,13 @@ export default function Reports() {
         </div>
 
         {/* Tab Selector */}
-        <div className="flex bg-gray-800 rounded-lg p-1 mb-4">
+        <div className="flex bg-surface-200 rounded-lg p-1 mb-4">
           <button
             onClick={() => setActiveTab('expenses')}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'expenses'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-gray-200'
+                : 'text-ink-300 hover:text-ink-100'
             }`}
           >
             Expenses
@@ -223,7 +206,7 @@ export default function Reports() {
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'investments'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-gray-200'
+                : 'text-ink-300 hover:text-ink-100'
             }`}
           >
             Investments
@@ -234,26 +217,26 @@ export default function Reports() {
         {activeTab === 'expenses' && (
           <>
             {/* Spending Summary */}
-            <div className="bg-gray-900 rounded-lg p-4 mb-4">
-              <h2 className="text-base font-medium mb-3 text-gray-100">Spending Summary</h2>
+            <div className="bg-surface-100 rounded-lg p-4 mb-4">
+              <h2 className="text-base font-medium mb-3 text-ink-50">Spending Summary</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Monthly Income</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(monthlyIncome)}</p>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Monthly Income</h3>
+                  <p className="text-sm font-bold text-ink-50">{state.settings.currency} {formatMoney(monthlyIncome)}</p>
                 </div>
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Monthly Expenses</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(monthlyExpenses)}</p>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Monthly Expenses</h3>
+                  <p className="text-sm font-bold text-ink-50">{state.settings.currency} {formatMoney(monthlyExpenses)}</p>
                 </div>
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Remaining Budget</h3>
-                  <p className={`text-sm font-bold ${remainingBudget < 0 ? 'text-red-500' : 'text-gray-100'}`}>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Remaining Budget</h3>
+                  <p className={`text-sm font-bold ${remainingBudget < 0 ? 'text-red-500' : 'text-ink-50'}`}>
                     {state.settings.currency} {formatMoney(remainingBudget)}
                   </p>
                 </div>
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Budget Used</h3>
-                  <p className={`text-sm font-bold ${budgetUsedPercentage > 100 ? 'text-red-500' : 'text-gray-100'}`}>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Budget Used</h3>
+                  <p className={`text-sm font-bold ${budgetUsedPercentage > 100 ? 'text-red-500' : 'text-ink-50'}`}>
                     {(budgetUsedPercentage ?? 0).toFixed(1)}%
                   </p>
                 </div>
@@ -261,9 +244,9 @@ export default function Reports() {
             </div>
 
             {/* Category Breakdown */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="bg-surface-100 rounded-lg p-4">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-base font-medium text-gray-100">Category Breakdown</h2>
+                <h2 className="text-base font-medium text-ink-50">Category Breakdown</h2>
               </div>
 
               <div className="h-80">
@@ -280,7 +263,7 @@ export default function Reports() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {categoryData.map((entry, index) => (
+                      {categoryData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -288,9 +271,10 @@ export default function Reports() {
                       contentStyle={{ backgroundColor: '#1F2937', border: 'none', fontSize: '8px' }}
                       itemStyle={{ fontSize: '9px', color: '#ffffff' }}
                       labelStyle={{ color: '#ffffff' }}
+                      formatter={(value: number) => [`${state.settings.currency} ${formatMoney(value)}`]}
                     />
                     <Legend
-                      formatter={(value) => <span className="text-gray-300">{value}</span>}
+                      formatter={(value) => <span className="text-ink-200">{value}</span>}
                       wrapperStyle={{ fontSize: '8px' }}
                     />
                   </PieChart>
@@ -299,17 +283,17 @@ export default function Reports() {
 
               {/* Category List */}
               <div className="mt-4">
-                <h3 className="text-base font-medium mb-2 text-gray-100">Detailed Breakdown</h3>
+                <h3 className="text-base font-medium mb-2 text-ink-50">Detailed Breakdown</h3>
                 <div className="space-y-2">
                   {categoryData.map((category, index) => (
-                    <div key={category.name} className="flex justify-between items-center p-2.5 bg-gray-800 rounded-lg">
+                    <div key={category.name} className="flex justify-between items-center p-2.5 bg-surface-200 rounded-lg">
                       <div className="flex items-center">
                         <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                        <span className="text-gray-300 text-sm">{category.name}</span>
+                        <span className="text-ink-200 text-sm">{category.name}</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-gray-100 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
-                        <div className="text-xs text-gray-400">{(category.percentage ?? 0).toFixed(1)}%</div>
+                        <div className="font-medium text-ink-50 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
+                        <div className="text-xs text-ink-300">{(category.percentage ?? 0).toFixed(1)}%</div>
                       </div>
                     </div>
                   ))}
@@ -323,25 +307,25 @@ export default function Reports() {
         {activeTab === 'investments' && (
           <>
             {/* Investment Summary */}
-            <div className="bg-gray-900 rounded-lg p-4 mb-4">
-              <h2 className="text-base font-medium mb-3 text-gray-100">Investment Summary</h2>
+            <div className="bg-surface-100 rounded-lg p-4 mb-4">
+              <h2 className="text-base font-medium mb-3 text-ink-50">Investment Summary</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Total Invested</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(totalInvested)}</p>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Total Invested</h3>
+                  <p className="text-sm font-bold text-ink-50">{state.settings.currency} {formatMoney(totalInvested)}</p>
                 </div>
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Current Value</h3>
-                  <p className="text-sm font-bold text-gray-100">{state.settings.currency} {formatMoney(totalCurrentValue)}</p>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Current Value</h3>
+                  <p className="text-sm font-bold text-ink-50">{state.settings.currency} {formatMoney(totalCurrentValue)}</p>
                 </div>
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Total Return</h3>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Total Return</h3>
                   <p className={`text-sm font-bold ${totalReturn < 0 ? 'text-red-500' : 'text-green-500'}`}>
                     {totalReturn >= 0 ? '+' : ''}{state.settings.currency} {formatMoney(totalReturn)}
                   </p>
                 </div>
-                <div className="bg-gray-800 p-3 rounded-lg">
-                  <h3 className="text-xs text-gray-400">Return %</h3>
+                <div className="bg-surface-200 p-3 rounded-lg">
+                  <h3 className="text-xs text-ink-300">Return %</h3>
                   <p className={`text-sm font-bold ${totalReturnPercentage < 0 ? 'text-red-500' : 'text-green-500'}`}>
                     {totalReturnPercentage >= 0 ? '+' : ''}{(totalReturnPercentage ?? 0).toFixed(1)}%
                   </p>
@@ -350,9 +334,9 @@ export default function Reports() {
             </div>
 
             {/* Investment Category Breakdown */}
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="bg-surface-100 rounded-lg p-4">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-base font-medium text-gray-100">Portfolio Allocation</h2>
+                <h2 className="text-base font-medium text-ink-50">Portfolio Allocation</h2>
               </div>
 
               {investmentCategoryData.length > 0 ? (
@@ -371,7 +355,7 @@ export default function Reports() {
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {investmentCategoryData.map((entry, index) => (
+                          {investmentCategoryData.map((_, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -382,7 +366,7 @@ export default function Reports() {
                           formatter={(value: number) => [`${state.settings.currency} ${formatMoney(value)}`, 'Value']}
                         />
                         <Legend
-                          formatter={(value) => <span className="text-gray-300">{value}</span>}
+                          formatter={(value) => <span className="text-ink-200">{value}</span>}
                           wrapperStyle={{ fontSize: '8px' }}
                         />
                       </PieChart>
@@ -391,20 +375,20 @@ export default function Reports() {
 
                   {/* Investment Category List */}
                   <div className="mt-4">
-                    <h3 className="text-base font-medium mb-2 text-gray-100">Detailed Breakdown</h3>
+                    <h3 className="text-base font-medium mb-2 text-ink-50">Detailed Breakdown</h3>
                     <div className="space-y-2">
                       {investmentCategoryData.map((category, index) => (
-                        <div key={category.name} className="flex justify-between items-center p-2.5 bg-gray-800 rounded-lg">
+                        <div key={category.name} className="flex justify-between items-center p-2.5 bg-surface-200 rounded-lg">
                           <div className="flex items-center">
                             <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                            <span className="text-gray-300 text-sm">{category.name}</span>
+                            <span className="text-ink-200 text-sm">{category.name}</span>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-gray-100 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
+                            <div className="font-medium text-ink-50 text-sm">{state.settings.currency} {formatMoney(category.value)}</div>
                             <div className={`text-xs ${category.returnAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                               {category.returnAmount >= 0 ? '+' : ''}{(category.returnPercentage ?? 0).toFixed(1)}% ({state.settings.currency} {formatMoney(category.returnAmount)})
                             </div>
-                            <div className="text-xs text-gray-400">{(category.percentage ?? 0).toFixed(1)}% of portfolio</div>
+                            <div className="text-xs text-ink-300">{(category.percentage ?? 0).toFixed(1)}% of portfolio</div>
                           </div>
                         </div>
                       ))}
@@ -412,7 +396,7 @@ export default function Reports() {
                   </div>
                 </>
               ) : (
-                <p className="text-center text-gray-500 py-8">
+                <p className="text-center text-ink-400 py-8">
                   No investments yet. Add investments to see your portfolio breakdown.
                 </p>
               )}

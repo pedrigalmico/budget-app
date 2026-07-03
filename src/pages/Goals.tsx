@@ -162,7 +162,7 @@ export default function Goals() {
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold dark:text-white">Savings Goals</h1>
+          <h1 className="text-2xl font-bold">Savings Goals</h1>
           <button
             onClick={() => {
               setEditingGoal(null);
@@ -177,7 +177,7 @@ export default function Goals() {
         {/* Month Filter */}
         <div className="card flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-2 flex-1">
-            <FaCalendarAlt className="text-gray-400 shrink-0" />
+            <FaCalendarAlt className="text-ink-300 shrink-0" />
             <input
               type="month"
               value={filterMonth}
@@ -197,11 +197,11 @@ export default function Goals() {
           </div>
           {isFiltering && (
             <div className="text-sm sm:text-right">
-              <span className="text-gray-400">{monthLabel}: </span>
+              <span className="text-ink-300">{monthLabel}: </span>
               <span className={`${monthlyTotal < 0 ? 'text-red-400' : 'text-green-400'} font-semibold`}>
                 {monthlyTotal < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(monthlyTotal))}
               </span>
-              <span className="text-gray-500"> across {activeGoalsCount} goal{activeGoalsCount !== 1 ? 's' : ''}</span>
+              <span className="text-ink-400"> across {activeGoalsCount} goal{activeGoalsCount !== 1 ? 's' : ''}</span>
             </div>
           )}
         </div>
@@ -209,7 +209,7 @@ export default function Goals() {
         {/* Add Goal Form */}
         {showForm && (
           <div className="card">
-            <h2 className="text-lg font-semibold mb-4 dark:text-white">
+            <h2 className="text-lg font-semibold mb-4">
               {editingGoal ? 'Edit Goal' : 'Add New Goal'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -322,12 +322,12 @@ export default function Goals() {
                 {/* Goal Header */}
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg dark:text-white">{goal.name}</h3>
-                    <div className="text-xs text-gray-400 mt-0.5">
+                    <h3 className="font-semibold text-lg">{goal.name}</h3>
+                    <div className="text-xs text-ink-300 mt-0.5">
                       Started {new Date(goal.date).toLocaleDateString()}
                     </div>
                     {goal.note && (
-                      <div className="text-sm text-gray-500 mt-1">{goal.note}</div>
+                      <div className="text-sm text-ink-400 mt-1">{goal.note}</div>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -357,20 +357,20 @@ export default function Goals() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-end text-sm">
                     <div>
-                      <span className="text-2xl font-bold dark:text-white">{progress.toFixed(1)}%</span>
+                      <span className="text-2xl font-bold text-ink-50">{progress.toFixed(1)}%</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-gray-400 text-xs">
+                      <div className="text-ink-300 text-xs">
                         {state.settings.currency} {formatMoney(goal.currentAmount)} of {formatMoney(goal.targetAmount)}
                       </div>
                       {remaining > 0 && (
-                        <div className="text-gray-500 text-xs">
+                        <div className="text-ink-400 text-xs">
                           {state.settings.currency} {formatMoney(remaining)} remaining
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-3 bg-surface-300 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${getProgressColor(progress)} transition-all duration-500 rounded-full`}
                       style={{ width: `${progress}%` }}
@@ -385,9 +385,9 @@ export default function Goals() {
 
                 {/* Contributions Section — filtered month view */}
                 {isFiltering && (
-                  <div className="mt-4 border-t border-gray-700 pt-3">
+                  <div className="mt-4 border-t border-surface-300 pt-3">
                     <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="font-medium text-gray-300">
+                      <span className="font-medium text-ink-200">
                         {monthLabel} ({monthEntries.length})
                       </span>
                       <span className={`${goalMonthTotal < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
@@ -396,12 +396,12 @@ export default function Goals() {
                     </div>
                     <div className="space-y-1.5">
                       {[...monthEntries].reverse().map(({ c: contribution, i: actualIndex }) => (
-                        <div key={actualIndex} className="flex items-center justify-between text-sm bg-gray-800/50 rounded-lg px-3 py-2 group">
+                        <div key={actualIndex} className="flex items-center justify-between text-sm bg-surface-200/50 rounded-lg px-3 py-2 group">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
+                              <span className="text-ink-300 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
                               {contribution.note && (
-                                <span className="text-gray-500 text-xs truncate">- {contribution.note}</span>
+                                <span className="text-ink-400 text-xs truncate">- {contribution.note}</span>
                               )}
                             </div>
                           </div>
@@ -412,14 +412,14 @@ export default function Goals() {
                             <div className="flex gap-1">
                               <button
                                 onClick={() => handleEditContribution(goal, actualIndex)}
-                                className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+                                className="p-1 text-ink-300 hover:text-blue-400 transition-colors"
                                 title="Edit contribution"
                               >
                                 <FaEdit className="text-xs" />
                               </button>
                               <button
                                 onClick={() => handleDeleteContribution(goal, actualIndex)}
-                                className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                                className="p-1 text-ink-300 hover:text-red-400 transition-colors"
                                 title="Delete contribution"
                               >
                                 <FaTrash className="text-xs" />
@@ -434,10 +434,10 @@ export default function Goals() {
 
                 {/* Contributions Section */}
                 {!isFiltering && contributionCount > 0 && (
-                  <div className="mt-4 border-t border-gray-700 pt-3">
+                  <div className="mt-4 border-t border-surface-300 pt-3">
                     <button
                       onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
-                      className="flex items-center justify-between w-full text-sm text-gray-300 hover:text-white transition-colors"
+                      className="flex items-center justify-between w-full text-sm text-ink-200 hover:text-white transition-colors"
                     >
                       <span className="font-medium">
                         Transactions ({contributionCount})
@@ -451,12 +451,12 @@ export default function Goals() {
                         {goal.contributions!.slice(-2).reverse().map((contribution: Contribution, idx: number) => {
                           const actualIndex = goal.contributions!.length - 1 - idx;
                           return (
-                            <div key={actualIndex} className="flex items-center justify-between text-sm bg-gray-800/50 rounded-lg px-3 py-2">
+                            <div key={actualIndex} className="flex items-center justify-between text-sm bg-surface-200/50 rounded-lg px-3 py-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-gray-400 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
+                                  <span className="text-ink-300 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
                                   {contribution.note && (
-                                    <span className="text-gray-500 text-xs truncate">- {contribution.note}</span>
+                                    <span className="text-ink-400 text-xs truncate">- {contribution.note}</span>
                                   )}
                                 </div>
                               </div>
@@ -475,12 +475,12 @@ export default function Goals() {
                         {[...goal.contributions!].reverse().map((contribution: Contribution, reverseIdx: number) => {
                           const actualIndex = goal.contributions!.length - 1 - reverseIdx;
                           return (
-                            <div key={actualIndex} className="flex items-center justify-between text-sm bg-gray-800/50 rounded-lg px-3 py-2 group">
+                            <div key={actualIndex} className="flex items-center justify-between text-sm bg-surface-200/50 rounded-lg px-3 py-2 group">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-gray-400 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
+                                  <span className="text-ink-300 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
                                   {contribution.note && (
-                                    <span className="text-gray-500 text-xs truncate">- {contribution.note}</span>
+                                    <span className="text-ink-400 text-xs truncate">- {contribution.note}</span>
                                   )}
                                 </div>
                               </div>
@@ -491,14 +491,14 @@ export default function Goals() {
                                 <div className="flex gap-1">
                                   <button
                                     onClick={() => handleEditContribution(goal, actualIndex)}
-                                    className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+                                    className="p-1 text-ink-300 hover:text-blue-400 transition-colors"
                                     title="Edit contribution"
                                   >
                                     <FaEdit className="text-xs" />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteContribution(goal, actualIndex)}
-                                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                                    className="p-1 text-ink-300 hover:text-red-400 transition-colors"
                                     title="Delete contribution"
                                   >
                                     <FaTrash className="text-xs" />
@@ -517,16 +517,16 @@ export default function Goals() {
           })}
           {state.goals.length === 0 && (
             <div className="text-center py-12">
-              <FaPiggyBank className="text-5xl text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400 text-lg">No savings goals yet</p>
-              <p className="text-gray-500 text-sm mt-1">Add a goal to start tracking your savings!</p>
+              <FaPiggyBank className="text-5xl text-ink-500 mx-auto mb-4" />
+              <p className="text-ink-300 text-lg">No savings goals yet</p>
+              <p className="text-ink-400 text-sm mt-1">Add a goal to start tracking your savings!</p>
             </div>
           )}
           {state.goals.length > 0 && isFiltering && activeGoalsCount === 0 && (
             <div className="text-center py-12">
-              <FaCalendarAlt className="text-5xl text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400 text-lg">No contributions in {monthLabel}</p>
-              <p className="text-gray-500 text-sm mt-1">Try a different month or clear the filter.</p>
+              <FaCalendarAlt className="text-5xl text-ink-500 mx-auto mb-4" />
+              <p className="text-ink-300 text-lg">No contributions in {monthLabel}</p>
+              <p className="text-ink-400 text-sm mt-1">Try a different month or clear the filter.</p>
             </div>
           )}
         </div>
@@ -541,24 +541,24 @@ export default function Goals() {
                   setSelectedGoal(null);
                   setEditingContribution(null);
                 }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                className="absolute top-4 right-4 text-ink-300 hover:text-white transition-colors"
               >
                 <FaTimes />
               </button>
-              <h2 className="text-lg font-semibold mb-1 dark:text-white">
+              <h2 className="text-lg font-semibold mb-1">
                 {editingContribution ? 'Edit Entry' : contributionType === 'deposit' ? 'Add Deposit' : 'Record Withdrawal'}
               </h2>
-              <p className="text-sm text-gray-400 mb-4">{selectedGoal.name}</p>
+              <p className="text-sm text-ink-300 mb-4">{selectedGoal.name}</p>
               <form onSubmit={handleContribution} className="space-y-4">
                 {/* Deposit / Withdrawal Toggle */}
-                <div className="flex rounded-lg overflow-hidden border border-gray-600">
+                <div className="flex rounded-lg overflow-hidden border border-surface-400">
                   <button
                     type="button"
                     onClick={() => setContributionType('deposit')}
                     className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
                       contributionType === 'deposit'
                         ? 'bg-green-600 text-white'
-                        : 'bg-gray-800 text-gray-400 hover:text-white'
+                        : 'bg-surface-200 text-ink-300 hover:text-white'
                     }`}
                   >
                     <FaPlus className="text-xs" /> Deposit
@@ -569,7 +569,7 @@ export default function Goals() {
                     className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
                       contributionType === 'withdrawal'
                         ? 'bg-red-600 text-white'
-                        : 'bg-gray-800 text-gray-400 hover:text-white'
+                        : 'bg-surface-200 text-ink-300 hover:text-white'
                     }`}
                   >
                     <FaMinus className="text-xs" /> Withdrawal

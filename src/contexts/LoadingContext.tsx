@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface LoadingContextType {
   isLoading: boolean;
@@ -17,10 +17,10 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     <LoadingContext.Provider value={{ isLoading, setIsLoading, message, setMessage }}>
       {children}
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-lg shadow-xl flex flex-col items-center space-y-4">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-            <p className="text-white">{message || 'Saving changes...'}</p>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="card-elevated p-6 flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-500/30 border-t-primary-500"></div>
+            <p className="text-ink-100">{message || 'Saving changes...'}</p>
           </div>
         </div>
       )}

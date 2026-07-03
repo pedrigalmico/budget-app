@@ -249,7 +249,6 @@ export default function Settings() {
     const settings: SettingsType = {
       ...state.settings,
       currency: formData.get('currency') as string,
-      darkMode: formData.get('darkMode') === 'true',
       customCategories: state.settings.customCategories || [],
       alphaVantageApiKey: (formData.get('alphaVantageApiKey') as string) || state.settings.alphaVantageApiKey,
       usdToSarRate: usdToSarRateStr ? parseFloat(usdToSarRateStr) : 3.75,
@@ -304,7 +303,7 @@ export default function Settings() {
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold dark:text-white">Settings</h1>
+          <h1 className="text-2xl font-bold">Settings</h1>
         </div>
 
         <div className="card">
@@ -328,25 +327,9 @@ export default function Settings() {
             </div>
 
             <div>
-              <label htmlFor="darkMode" className="block text-sm font-medium mb-1">
-                Dark Mode
-              </label>
-              <select
-                name="darkMode"
-                id="darkMode"
-                required
-                className="input"
-                defaultValue={state.settings.darkMode.toString()}
-              >
-                <option value="true">Enabled</option>
-                <option value="false">Disabled</option>
-              </select>
-            </div>
-
-            <div>
               <label htmlFor="alphaVantageApiKey" className="block text-sm font-medium mb-1">
                 Alpha Vantage API Key{' '}
-                <span className="text-gray-500">(stocks &amp; ETFs only — not needed for gold)</span>
+                <span className="text-ink-400">(stocks &amp; ETFs only — not needed for gold)</span>
               </label>
               <input
                 type="text"
@@ -356,9 +339,9 @@ export default function Settings() {
                 placeholder="Get free key at alphavantage.co"
                 defaultValue={state.settings.alphaVantageApiKey || ''}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-ink-400 mt-1">
                 Only required for stock/ETF prices (25 calls/day free).{' '}
-                <strong className="text-gray-400">Gold &amp; silver prices use metals.live → Yahoo Finance → ExchangeRate-API — no key needed.</strong>
+                <strong className="text-ink-300">Gold &amp; silver prices use metals.live → Yahoo Finance → ExchangeRate-API — no key needed.</strong>
               </p>
             </div>
 
@@ -375,7 +358,7 @@ export default function Settings() {
                 min="0"
                 defaultValue={state.settings.usdToSarRate || 3.75}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-ink-400 mt-1">
                 Fixed peg rate is 3.75. Used to convert USD investments to SAR.
               </p>
             </div>
@@ -393,11 +376,11 @@ export default function Settings() {
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {activeDefaultCategories.map(category => (
-                  <span key={category} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-gray-800 rounded-full">
+                  <span key={category} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 bg-surface-200 rounded-full">
                     {category}
                     <button
                       onClick={() => handleRemoveDefaultCategory(category)}
-                      className="text-gray-500 hover:text-red-400 transition-colors"
+                      className="text-ink-400 hover:text-red-400 transition-colors"
                     >
                       ×
                     </button>
@@ -408,7 +391,7 @@ export default function Settings() {
                     {category.name}
                     <button
                       onClick={() => handleRemoveCategory(category.id)}
-                      className="text-gray-500 hover:text-red-400 transition-colors"
+                      className="text-ink-400 hover:text-red-400 transition-colors"
                     >
                       ×
                     </button>
@@ -437,7 +420,7 @@ export default function Settings() {
           <h2 className="text-lg font-semibold">Export Data</h2>
           <div className="card">
             <div className="space-y-3">
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-ink-300">
                 Export your financial data to analyse with an LLM (ChatGPT, Claude) or keep as backup.
               </p>
               <button
@@ -455,7 +438,7 @@ export default function Settings() {
                 </button>
                 <button
                   onClick={handleExportJSON}
-                  className="flex-1 btn bg-gray-600 hover:bg-gray-700 text-white"
+                  className="flex-1 btn bg-surface-400 hover:bg-surface-300 text-white"
                 >
                   Download as JSON
                 </button>
@@ -472,12 +455,12 @@ export default function Settings() {
           <h2 className="text-lg font-semibold">Account</h2>
           <div className="card">
             <div className="space-y-4">
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-ink-300">
                 Signed in as: {currentUser?.email}
               </p>
               <button
                 onClick={handleLogout}
-                className="w-full btn bg-gray-600 hover:bg-gray-700 text-white"
+                className="w-full btn bg-surface-400 hover:bg-surface-300 text-white"
               >
                 Log Out
               </button>

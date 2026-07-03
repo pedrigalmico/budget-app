@@ -1,11 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
-import { useAppState } from './hooks/useAppState';
 import {
   FaHome, FaCog, FaWallet, FaArrowUp, FaBullseye, FaChartLine, FaChartPie, FaSignOutAlt,
 } from 'react-icons/fa';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoadingProvider } from './contexts/LoadingContext';
-import { useFirestore } from './hooks/useFirestore';
 import PrivateRoute from './components/PrivateRoute';
 
 import Home from './pages/Home';
@@ -137,13 +135,9 @@ function AuthedShell({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
-  const { state } = useAppState();
-  const { darkMode } = state.settings;
-  useFirestore();
-
   return (
-    <Router>
-      <div className={`app-shell ${darkMode === false ? '' : 'dark'}`}>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <div className="app-shell dark">
         <Routes>
           <Route path="/login"  element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />

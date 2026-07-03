@@ -47,10 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signup(email: string, password: string): Promise<UserCredential> {
     try {
       setLoading(true);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      return userCredential;
-    } catch (error: any) {
-      throw error;
+      return await createUserWithEmailAndPassword(auth, email, password);
     } finally {
       setLoading(false);
     }
@@ -59,10 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(email: string, password: string): Promise<UserCredential> {
     try {
       setLoading(true);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return userCredential;
-    } catch (error: any) {
-      throw error;
+      return await signInWithEmailAndPassword(auth, email, password);
     } finally {
       setLoading(false);
     }
@@ -72,8 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       await signOut(auth);
-    } catch (error: any) {
-      throw error;
     } finally {
       setLoading(false);
     }

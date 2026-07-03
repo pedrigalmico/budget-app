@@ -235,7 +235,7 @@ export default function Income() {
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold dark:text-white">Income Sources</h1>
+          <h1 className="text-2xl font-bold">Income Sources</h1>
           <button
             onClick={() => setShowForm(true)}
             className="btn btn-primary flex items-center gap-2"
@@ -249,13 +249,13 @@ export default function Income() {
           <h2 className="text-lg font-semibold mb-4">Income Summary</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-sm text-gray-400">Monthly Recurring</div>
+              <div className="text-sm text-ink-300">Monthly Recurring</div>
               <div className="text-2xl font-bold text-green-500">
                 {state.settings.currency} {formatMoney(calculateMonthlyIncome(state.incomes))}
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-400">This Month's Total</div>
+              <div className="text-sm text-ink-300">This Month's Total</div>
               <div className="text-2xl font-bold text-blue-500">
                 {state.settings.currency} {formatMoney(calculateCurrentMonthIncome(state.incomes))}
               </div>
@@ -277,11 +277,11 @@ export default function Income() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium truncate">{income.name}</h3>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-300 shrink-0">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-surface-300 text-ink-200 shrink-0">
                         {income.type}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 mt-1 text-xs text-ink-300">
                       <span>{new Date(income.date).toLocaleDateString()}</span>
                       <span>•</span>
                       <span>{income.frequency}{income.isRecurring ? ' ↻' : ''}</span>

@@ -18,9 +18,17 @@ export default function Login() {
       setLoading(true);
       await login(email, password);
       navigate('/');
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Failed to sign in');
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+        setError('Incorrect email or password.');
+      } else if (code === 'auth/user-not-found') {
+        setError('No account found with that email.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many attempts — please try again later.');
+      } else {
+        setError('Unable to sign in. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

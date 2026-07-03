@@ -1,30 +1,46 @@
-# Simple Budgeting App
+# MiKai — Personal Finance
 
-A minimal, user-friendly budgeting app designed for couples to manage their finances. Track expenses, set savings goals, and monitor investments—all in one place.
+A personal finance dashboard for tracking income, expenses, savings goals, and investments in one place. Built with React + TypeScript + Vite, styled with Tailwind CSS, and backed by Firebase (Auth + Firestore).
+
+Live app: https://budgeting-app-221d6.web.app/
 
 ## Features
 
-- 📊 Dashboard with current balance and monthly spending overview
-- 💰 Expense tracking with categories
-- 🎯 Savings goals with progress tracking
-- 💼 Investment tracking with returns calculation
-- ⚙️ Customizable settings (currency, spending limits, dark mode)
-- 📱 Mobile-first, responsive design
-- Track expenses by category
+- 📊 **Overview dashboard** — income, expenses, investments, and goal contributions charted over time (month / YTD / year views)
+- 💰 **Expense tracking** — categorized expenses with per-category monthly budget limits, credit/debit account tagging
+- 📈 **Income sources** — recurring (weekly / monthly / yearly) and one-time income
+- 🎯 **Savings goals** — target amounts with individual contribution/withdrawal history
+- 💼 **Investments** — lot-based position tracking (each purchase recorded separately), with:
+  - Live stock/ETF prices via Alpha Vantage (optional API key)
+  - Gold/commodity pricing with karat purity support
+  - Manual valuation for real estate and other illiquid assets
+  - USD/SAR currency conversion for cross-currency purchases
+- 📑 **Reports** — expense and investment breakdowns by category
+- 🌙 Dark, token-based design system; responsive with a mobile bottom nav and desktop sidebar
+
+## Tech Stack
+
+| Layer     | Choice                                   |
+|-----------|------------------------------------------|
+| Frontend  | React 18, TypeScript, Vite               |
+| Styling   | Tailwind CSS (custom `ink`/`surface`/`primary` tokens) |
+| Charts    | Recharts                                 |
+| Backend   | Firebase Authentication + Cloud Firestore |
+| Hosting   | Firebase Hosting                         |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- npm (v6 or higher)
+- Node.js 18+
+- npm 9+
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd budgeting-app
+   git clone https://github.com/pedrigalmico/budget-app
+   cd budget-app
    ```
 
 2. Install dependencies:
@@ -37,45 +53,26 @@ A minimal, user-friendly budgeting app designed for couples to manage their fina
    npm run dev
    ```
 
-4. Open your browser and navigate to `http://localhost:5173`
+4. Open `http://localhost:5173`
 
-## Usage
+### Scripts
 
-### Dashboard
-- View your current available balance
-- Track monthly spending against your limit
-- Monitor progress on savings goals
+| Command         | Purpose                                  |
+|-----------------|------------------------------------------|
+| `npm run dev`   | Start the Vite dev server                |
+| `npm run build` | Type-check (`tsc -b`) and build to `dist/` |
+| `npm run lint`  | Run ESLint (zero warnings allowed)       |
+| `npm run preview` | Preview the production build locally   |
 
-### Expenses
-- Add new expenses with categories
-- Filter expenses by month
-- Add optional notes
+### Deployment
 
-### Goals
-- Set savings goals with target amounts
-- Track progress with visual progress bars
-- View estimated completion based on savings rate
-
-### Investments
-- Track various investments (REITs, crypto, savings)
-- Monitor returns and current values
-- Add notes for each investment
-
-### Settings
-- Set monthly income
-- Set monthly spending limit
-- Choose preferred currency
-- Toggle dark mode
-- Clear all data if needed
+```bash
+npm run build
+firebase deploy
+```
 
 ## Data Storage
 
-The app uses local storage to persist your data. No account or backend is required. All data is stored locally in your browser.
+Each user's data lives in a single Firestore document (`users/{uid}`), synced in real time and debounced on write. An account (email/password) is required; Firestore security rules restrict every user to their own document.
 
-## Contributing
-
-Feel free to submit issues and enhancement requests!
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+Legacy flat investment records are migrated automatically to the lot-based format on load — the migration is non-destructive.

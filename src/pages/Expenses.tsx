@@ -115,7 +115,7 @@ export default function Expenses() {
 
   const renderExpenseForm = () => (
     <div className="card">
-      <h2 className="text-lg font-semibold mb-4 dark:text-white">
+      <h2 className="text-lg font-semibold mb-4">
         {editingExpense ? 'Edit Expense' : 'Add New Expense'}
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -241,7 +241,7 @@ export default function Expenses() {
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold dark:text-white">Expenses</h1>
+        <h1 className="text-2xl font-bold">Expenses</h1>
         <button
           onClick={() => {
             setEditingExpense(null);
@@ -287,16 +287,16 @@ export default function Expenses() {
 
       {/* Monthly Total Card with Budget Limits */}
       <div className="card">
-        <h2 className="text-lg text-gray-400">Total Expenses for {new Date(selectedMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
+        <h2 className="text-lg text-ink-300">Total Expenses for {new Date(selectedMonth + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
         <div className="text-3xl font-bold text-red-500 mb-4">
           {state.settings.currency} {formatMoney(totalExpenses)}
         </div>
 
         {/* Category Budget Limits */}
         {Object.keys(categoryBudgets).length > 0 && !editingBudgets && (
-          <div className="border-t border-gray-700 pt-4">
+          <div className="border-t border-surface-300 pt-4">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-sm font-medium text-gray-400">Category Budgets</h3>
+              <h3 className="text-sm font-medium text-ink-300">Category Budgets</h3>
               <button
                 onClick={() => setEditingBudgets(true)}
                 className="text-xs text-blue-400 hover:text-blue-300"
@@ -314,12 +314,12 @@ export default function Expenses() {
                 return (
                   <div key={category}>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm text-gray-300">{category}</span>
-                      <span className="text-sm text-gray-400">
+                      <span className="text-sm text-ink-200">{category}</span>
+                      <span className="text-sm text-ink-300">
                         {state.settings.currency} {formatMoney(spent)} / {formatMoney(limit)}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2.5">
+                    <div className="w-full bg-surface-300 rounded-full h-2.5">
                       <div
                         className={`h-2.5 rounded-full transition-all ${
                           isOver ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-green-500'
@@ -348,9 +348,9 @@ export default function Expenses() {
 
         {/* Edit Budget Limits */}
         {editingBudgets && (
-          <div className="border-t border-gray-700 pt-4">
+          <div className="border-t border-surface-300 pt-4">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-sm font-medium text-gray-400">Set Category Budgets</h3>
+              <h3 className="text-sm font-medium text-ink-300">Set Category Budgets</h3>
               <button
                 onClick={() => setEditingBudgets(false)}
                 className="text-xs text-blue-400 hover:text-blue-300"
@@ -361,7 +361,7 @@ export default function Expenses() {
             <div className="space-y-2">
               {allCategories.map(category => (
                 <div key={category} className="flex items-center gap-3">
-                  <span className="text-sm text-gray-300 w-40 shrink-0">{category}</span>
+                  <span className="text-sm text-ink-200 w-40 shrink-0">{category}</span>
                   <input
                     type="number"
                     min="0"
@@ -395,8 +395,8 @@ export default function Expenses() {
             <div className="card">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-medium dark:text-white">{expense.category}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="font-medium text-ink-50">{expense.category}</div>
+                  <div className="text-sm text-ink-300">
                     {new Date(expense.date).toLocaleDateString()}
                     {expense.note && ` - ${expense.note}`}
                     {` - ${(expense.accountType ? expense.accountType.charAt(0).toUpperCase() + expense.accountType.slice(1) : 'N/A')}`}
@@ -404,7 +404,7 @@ export default function Expenses() {
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="text-right">
-                    <div className="font-semibold dark:text-white">
+                    <div className="font-semibold text-ink-50">
                       {state.settings.currency} {formatMoney(expense.amount)}
                     </div>
                   </div>
@@ -427,7 +427,7 @@ export default function Expenses() {
           </div>
         ))}
         {filteredExpenses.length === 0 && (
-          <p className="text-center text-gray-500 dark:text-gray-400">
+          <p className="text-center text-ink-300">
             No expenses found for this month.
           </p>
         )}

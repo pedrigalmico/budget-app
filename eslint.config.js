@@ -25,4 +25,12 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Context files export a provider component plus its hook — an accepted
+    // pattern; fast refresh falls back to a full reload for these files.
+    files: ['src/contexts/**'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 )

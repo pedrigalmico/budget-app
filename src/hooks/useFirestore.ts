@@ -1,27 +1,31 @@
 import { useEffect, useState, useRef } from 'react';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, type DocumentData } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import type { AppState } from '../types';
+import type { AppState, InvestmentLot, LegacyInvestment } from '../types';
+
+// Stored records may be legacy, partially migrated, or fully migrated
+type StoredInvestment = Partial<InvestmentLot> & Partial<LegacyInvestment> & { id: string };
 
 /**
  * Migrate legacy flat Investment records to the new InvestmentLot format.
  * Detects old format by checking for 'amount' without 'positionKey'.
  * One-time, non-destructive — old data is converted, not deleted.
  */
-function migrateInvestments(data: any): any {
-  if (!data.investments || data.investments.length === 0) return data;
+function migrateInvestments(data: DocumentData): DocumentData {
+  const investments = (data.investments ?? []) as StoredInvestment[];
+  if (investments.length === 0) return data;
 
   // Check if any investment needs migration (legacy or partially migrated)
-  const needsMigration = data.investments.some(
-    (inv: any) =>
+  const needsMigration = investments.some(
+    (inv) =>
       (inv.positionKey === undefined && inv.amount !== undefined) ||
       (inv.quantity === undefined || inv.pricePerUnit === undefined)
   );
 
   if (!needsMigration) return data;
 
-  const migratedInvestments = data.investments.map((inv: any) => {
+  const migratedInvestments = investments.map((inv) => {
     // Fully migrated lot — has all required numeric fields
     if (
       inv.positionKey !== undefined &&
@@ -45,7 +49,7 @@ function migrateInvestments(data: any): any {
       notes: inv.notes,
       manualCurrentValue: inv.manualCurrentValue ?? inv.currentValue,
       useManualValuation: (inv.manualCurrentValue ?? inv.currentValue) !== undefined ? true : undefined,
-    };
+    } satisfies InvestmentLot;
   });
 
   return {
@@ -124,7 +128,7 @@ export function useFirestore() {
     };
   }, [currentUser]);
 
-  const cleanUndefinedValues = (obj: any): any => {
+  const cleanUndefinedValues = (obj: unknown): unknown => {
     if (obj === null || typeof obj !== 'object') {
       return obj;
     }
@@ -133,13 +137,11 @@ export function useFirestore() {
       return obj.map(cleanUndefinedValues).filter(item => item !== undefined);
     }
 
-    const cleaned: any = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        const value = cleanUndefinedValues(obj[key]);
-        if (value !== undefined) {
-          cleaned[key] = value;
-        }
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const cleanedValue = cleanUndefinedValues(value);
+      if (cleanedValue !== undefined) {
+        cleaned[key] = cleanedValue;
       }
     }
     return cleaned;
@@ -150,7 +152,7 @@ export function useFirestore() {
       return;
     }
 
-    const cleanedData = cleanUndefinedValues(newData);
+    const cleanedData = cleanUndefinedValues(newData) as AppState;
     const dataString = JSON.stringify(cleanedData);
 
     // Only update if data has actually changed

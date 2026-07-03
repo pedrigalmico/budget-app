@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FaMoneyBillWave, FaChartLine, FaPiggyBank, FaWallet, FaBullseye, FaArrowRight } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { groupLotsIntoPositions } from '../utils/investmentUtils';
 
 type ViewType = 'month' | 'ytd' | 'year';
@@ -30,23 +29,9 @@ export default function Home() {
   const { state, formatMoney } = useAppState();
   const navigate = useNavigate();
   const [viewType, setViewType] = useState<ViewType>('ytd');
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth] = useState<number>(new Date().getMonth());
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(['income', 'expenses', 'investments', 'goals']);
-  const { login } = useAuth();
-
-  // Generate available years (5 years back from current year)
-  const availableYears = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 6 }, (_, i) => currentYear - 5 + i);
-  }, []);
-
-  // Generate month names
-  const monthNames = useMemo(() => {
-    return Array.from({ length: 12 }, (_, i) => 
-      new Date(2000, i).toLocaleString('default', { month: 'long' })
-    );
-  }, []);
 
   // Calculate current month's totals
   const currentMonthIncome = useMemo(() => {
@@ -262,7 +247,7 @@ export default function Home() {
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold dark:text-white">Welcome Back, MiKai</h1>
+          <h1 className="text-2xl font-bold">Welcome Back, MiKai</h1>
           {/* Empty div for consistent spacing when there's no right-aligned element */}
           <div className="w-10"></div>
         </div>
@@ -282,7 +267,7 @@ export default function Home() {
               </div>
               <div>
                 <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthIncome)}</p>
-                <p className="text-sm text-gray-400">This Month</p>
+                <p className="text-sm text-ink-300">This Month</p>
               </div>
             </div>
           </button>
@@ -301,7 +286,7 @@ export default function Home() {
               <div>
                 <p className="text-lg font-bold">{state.settings.currency}{formatMoney(currentMonthExpenses)}</p>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-400">Monthly Spending</p>
+                  <p className="text-sm text-ink-300">Monthly Spending</p>
                 </div>
               </div>
             </div>
@@ -320,7 +305,7 @@ export default function Home() {
               </div>
               <div>
                 <p className="text-lg font-bold">{state.settings.currency}{formatMoney(totalInvestments)}</p>
-                <p className="text-sm text-gray-400">Total Value</p>
+                <p className="text-sm text-ink-300">Total Value</p>
               </div>
             </div>
           </button>
@@ -338,7 +323,7 @@ export default function Home() {
               </div>
               <div>
                 <p className="text-lg font-bold">{state.settings.currency}{formatMoney(totalGoals)}</p>
-                <p className="text-sm text-gray-400">Total Progress</p>
+                <p className="text-sm text-ink-300">Total Progress</p>
               </div>
             </div>
           </button>
@@ -347,19 +332,19 @@ export default function Home() {
         {/* Period Selector */}
         <div className="flex gap-4 items-center mb-3">
           <button
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'month' ? 'bg-blue-600 text-white' : 'bg-surface-300 text-ink-100'}`}
             onClick={() => setViewType('month')}
           >
             Month
           </button>
           <button
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'ytd' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'ytd' ? 'bg-blue-600 text-white' : 'bg-surface-300 text-ink-100'}`}
             onClick={() => setViewType('ytd')}
           >
             YTD
           </button>
           <button
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'year' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${viewType === 'year' ? 'bg-blue-600 text-white' : 'bg-surface-300 text-ink-100'}`}
             onClick={() => setViewType('year')}
           >
             Year
@@ -369,19 +354,19 @@ export default function Home() {
         {/* Category Filter */}
         <div className="flex flex-wrap gap-4 mb-7">
           <button
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('income') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('income') ? 'bg-blue-600 text-white' : 'bg-surface-300 text-ink-100'}`}
             onClick={() => setSelectedCategories(prev => prev.includes('income') ? prev.filter(c => c !== 'income') : [...prev, 'income'])}
           >Income</button>
           <button
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('expenses') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('expenses') ? 'bg-blue-600 text-white' : 'bg-surface-300 text-ink-100'}`}
             onClick={() => setSelectedCategories(prev => prev.includes('expenses') ? prev.filter(c => c !== 'expenses') : [...prev, 'expenses'])}
           >Expenses</button>
           <button
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('investments') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('investments') ? 'bg-blue-600 text-white' : 'bg-surface-300 text-ink-100'}`}
             onClick={() => setSelectedCategories(prev => prev.includes('investments') ? prev.filter(c => c !== 'investments') : [...prev, 'investments'])}
           >Investments</button>
           <button
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('goals') ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${selectedCategories.includes('goals') ? 'bg-blue-600 text-white' : 'bg-surface-300 text-ink-100'}`}
             onClick={() => setSelectedCategories(prev => prev.includes('goals') ? prev.filter(c => c !== 'goals') : [...prev, 'goals'])}
           >Goals</button>
         </div>
