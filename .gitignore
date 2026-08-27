@@ -56,3 +56,6 @@ lerna-debug.log*
 
 dist-ssr
 *.local
+
+# Firebase emulator state
+.emulator-data/
