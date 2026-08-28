@@ -15,6 +15,8 @@ export interface Contribution {
   note?: string;
 }
 
+export type GoalType = 'savings' | 'funded_expense';
+
 export interface Goal {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export interface Goal {
   date: string;
   note?: string;
   contributions?: Contribution[];
+  goalType?: GoalType;
 }
 
 // Legacy investment format (for migration detection only)

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useAppState } from '../hooks/useAppState';
-import { Goal, Contribution } from '../types';
-import { FaPlus, FaEdit, FaPiggyBank, FaTrash, FaChevronDown, FaChevronUp, FaTimes, FaMinus, FaCalendarAlt } from 'react-icons/fa';
+import { Goal, Contribution, GoalType } from '../types';
+import { FaPlus, FaEdit, FaPiggyBank, FaTrash, FaChevronDown, FaChevronUp, FaTimes, FaMinus, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
+
+type ContributionFilter = 'all' | 'deposits' | 'costs';
 
 export default function Goals() {
   const { state, addGoal, updateGoal, formatMoney, deleteGoal } = useAppState();
@@ -13,6 +15,8 @@ export default function Goals() {
   const [editingContribution, setEditingContribution] = useState<{ goalId: string; index: number; contribution: Contribution } | null>(null);
   const [contributionType, setContributionType] = useState<'deposit' | 'withdrawal'>('deposit');
   const [filterMonth, setFilterMonth] = useState<string>('');
+  const [goalTypeForm, setGoalTypeForm] = useState<GoalType>('savings');
+  const [contributionFilters, setContributionFilters] = useState<Record<string, ContributionFilter>>({});
 
   const isFiltering = !!filterMonth;
   const monthLabel = filterMonth
@@ -26,6 +30,11 @@ export default function Goals() {
     ? state.goals.filter(g => (g.contributions || []).some(c => c.date.startsWith(filterMonth))).length
     : 0;
 
+  const getContributionFilter = (goalId: string): ContributionFilter => contributionFilters[goalId] || 'all';
+  const setContributionFilter = (goalId: string, filter: ContributionFilter) => {
+    setContributionFilters(prev => ({ ...prev, [goalId]: filter }));
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -38,7 +47,8 @@ export default function Goals() {
       currentAmount: parseFloat(formData.get('currentAmount') as string),
       date: editingGoal?.date || new Date().toISOString(),
       note: formData.get('note') as string || undefined,
-      contributions: editingGoal?.contributions || []
+      contributions: editingGoal?.contributions || [],
+      goalType: goalTypeForm
     };
 
     if (editingGoal) {
@@ -54,6 +64,7 @@ export default function Goals() {
 
   const handleEdit = (goal: Goal) => {
     setEditingGoal(goal);
+    setGoalTypeForm(goal.goalType || 'savings');
     setShowForm(true);
   };
 
@@ -70,7 +81,6 @@ export default function Goals() {
     const contributionNote = formData.get('note') as string || undefined;
 
     if (editingContribution) {
-      // Editing existing contribution
       const oldAmount = editingContribution.contribution.amount;
       const amountDifference = contributionAmount - oldAmount;
       const updatedContributions = [...(selectedGoal.contributions || [])];
@@ -89,7 +99,6 @@ export default function Goals() {
       updateGoal(updatedGoal);
       setEditingContribution(null);
     } else {
-      // Adding new contribution
       const newCurrentAmount = selectedGoal.currentAmount + contributionAmount;
 
       const updatedGoal: Goal = {
@@ -158,6 +167,127 @@ export default function Goals() {
     return 'bg-orange-500';
   };
 
+  const computeGoalMetrics = (goal: Goal) => {
+    const contributions = goal.contributions || [];
+    const isFundedExpense = (goal.goalType || 'savings') === 'funded_expense';
+
+    if (!isFundedExpense) {
+      const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+      const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
+      return { isFundedExpense: false as const, progress, remaining };
+    }
+
+    const funded = contributions.filter(c => c.amount > 0).reduce((sum, c) => sum + c.amount, 0);
+    const spent = contributions.filter(c => c.amount < 0).reduce((sum, c) => sum + Math.abs(c.amount), 0);
+    const available = funded - spent;
+    const unfunded = Math.max(goal.targetAmount - funded, 0);
+    const fundingProgress = Math.min((funded / goal.targetAmount) * 100, 100);
+    const spentPercent = (spent / goal.targetAmount) * 100;
+    const availablePercent = (available / goal.targetAmount) * 100;
+    const unfundedPercent = (unfunded / goal.targetAmount) * 100;
+    const remainingToSpend = Math.max(goal.targetAmount - spent, 0);
+    const isFullyFunded = funded >= goal.targetAmount;
+    const isOverBudget = spent > goal.targetAmount;
+    const overage = isOverBudget ? spent - goal.targetAmount : 0;
+
+    return {
+      isFundedExpense: true as const,
+      funded,
+      spent,
+      available,
+      unfunded,
+      fundingProgress,
+      spentPercent,
+      availablePercent,
+      unfundedPercent,
+      remainingToSpend,
+      isFullyFunded,
+      isOverBudget,
+      overage,
+    };
+  };
+
+  const filterContributions = (contributions: { c: Contribution; i: number }[], filter: ContributionFilter) => {
+    if (filter === 'deposits') return contributions.filter(({ c }) => c.amount > 0);
+    if (filter === 'costs') return contributions.filter(({ c }) => c.amount < 0);
+    return contributions;
+  };
+
+  const renderContributionRow = (contribution: Contribution, actualIndex: number, goal: Goal, showActions: boolean) => (
+    <div key={actualIndex} className="flex items-center justify-between text-sm bg-surface-200/50 rounded-lg px-3 py-2 group">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-ink-300 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
+          {contribution.note && (
+            <span className="text-ink-400 text-xs truncate">- {contribution.note}</span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 ml-3">
+        <span className={`${contribution.amount < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
+          {contribution.amount < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(contribution.amount))}
+        </span>
+        {showActions && (
+          <div className="flex gap-1">
+            <button
+              onClick={() => handleEditContribution(goal, actualIndex)}
+              className="p-1 text-ink-300 hover:text-blue-400 transition-colors"
+              title="Edit contribution"
+            >
+              <FaEdit className="text-xs" />
+            </button>
+            <button
+              onClick={() => handleDeleteContribution(goal, actualIndex)}
+              className="p-1 text-ink-300 hover:text-red-400 transition-colors"
+              title="Delete contribution"
+            >
+              <FaTrash className="text-xs" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderFilterTabs = (goalId: string, isFundedExpense: boolean) => {
+    if (!isFundedExpense) return null;
+    const currentFilter = getContributionFilter(goalId);
+    const tabs: { key: ContributionFilter; label: string }[] = [
+      { key: 'all', label: 'All' },
+      { key: 'deposits', label: 'Deposits' },
+      { key: 'costs', label: 'Costs' },
+    ];
+    return (
+      <div className="flex gap-1 mb-2">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setContributionFilter(goalId, tab.key)}
+            className={`px-2.5 py-1 text-xs rounded-md font-medium transition-colors ${
+              currentFilter === tab.key
+                ? 'bg-surface-400 text-ink-50'
+                : 'text-ink-300 hover:text-ink-100 hover:bg-surface-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const renderFilterSummary = (entries: { c: Contribution; i: number }[], filter: ContributionFilter) => {
+    const filtered = filterContributions(entries, filter);
+    const count = filtered.length;
+    const subtotal = filtered.reduce((sum, { c }) => sum + c.amount, 0);
+    if (count === 0) return null;
+    return (
+      <span className="text-ink-400 text-xs ml-2">
+        {count} {filter === 'all' ? 'entries' : filter} · {state.settings.currency} {formatMoney(Math.abs(subtotal))}
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -166,6 +296,7 @@ export default function Goals() {
           <button
             onClick={() => {
               setEditingGoal(null);
+              setGoalTypeForm('savings');
               setShowForm(!showForm);
             }}
             className="btn btn-primary flex items-center gap-2"
@@ -213,6 +344,40 @@ export default function Goals() {
               {editingGoal ? 'Edit Goal' : 'Add New Goal'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Goal Type Toggle */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Goal Type</label>
+                <div className="flex rounded-lg overflow-hidden border border-surface-400">
+                  <button
+                    type="button"
+                    onClick={() => setGoalTypeForm('savings')}
+                    className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                      goalTypeForm === 'savings'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-surface-200 text-ink-300 hover:text-white'
+                    }`}
+                  >
+                    Savings
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGoalTypeForm('funded_expense')}
+                    className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                      goalTypeForm === 'funded_expense'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-surface-200 text-ink-300 hover:text-white'
+                    }`}
+                  >
+                    Funded Expense
+                  </button>
+                </div>
+                <p className="text-xs text-ink-400 mt-1">
+                  {goalTypeForm === 'savings'
+                    ? 'Track savings toward a target. Withdrawals reduce progress.'
+                    : 'Track funding and spending separately. Spending uses funded money without reducing progress.'}
+                </p>
+              </div>
+
               <div>
                 <label htmlFor="name" className="block text-sm font-medium mb-1">
                   Goal Name
@@ -305,15 +470,14 @@ export default function Goals() {
         {/* Goals List */}
         <div className="space-y-4">
           {state.goals.map(goal => {
-            const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
-            const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
+            const metrics = computeGoalMetrics(goal);
             const isExpanded = expandedGoalId === goal.id;
             const contributionCount = goal.contributions?.length || 0;
+            const currentFilter = getContributionFilter(goal.id);
 
             // Month-filtered entries (keep original index for edit/delete)
-            const monthEntries = (goal.contributions || [])
-              .map((c, i) => ({ c, i }))
-              .filter(({ c }) => c.date.startsWith(filterMonth));
+            const allEntries = (goal.contributions || []).map((c, i) => ({ c, i }));
+            const monthEntries = allEntries.filter(({ c }) => c.date.startsWith(filterMonth));
             if (isFiltering && monthEntries.length === 0) return null;
             const goalMonthTotal = monthEntries.reduce((sum, { c }) => sum + c.amount, 0);
 
@@ -322,7 +486,14 @@ export default function Goals() {
                 {/* Goal Header */}
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{goal.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-lg">{goal.name}</h3>
+                      {metrics.isFundedExpense && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium">
+                          Funded Expense
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-ink-300 mt-0.5">
                       Started {new Date(goal.date).toLocaleDateString()}
                     </div>
@@ -354,80 +525,125 @@ export default function Goals() {
                 </div>
 
                 {/* Progress Section */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-end text-sm">
-                    <div>
-                      <span className="text-2xl font-bold text-ink-50">{progress.toFixed(1)}%</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-ink-300 text-xs">
-                        {state.settings.currency} {formatMoney(goal.currentAmount)} of {formatMoney(goal.targetAmount)}
+                {!metrics.isFundedExpense ? (
+                  /* === SAVINGS GOAL — unchanged behaviour === */
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end text-sm">
+                      <div>
+                        <span className="text-2xl font-bold text-ink-50">{metrics.progress.toFixed(1)}%</span>
                       </div>
-                      {remaining > 0 && (
-                        <div className="text-ink-400 text-xs">
-                          {state.settings.currency} {formatMoney(remaining)} remaining
+                      <div className="text-right">
+                        <div className="text-ink-300 text-xs">
+                          {state.settings.currency} {formatMoney(goal.currentAmount)} of {formatMoney(goal.targetAmount)}
                         </div>
+                        {metrics.remaining > 0 && (
+                          <div className="text-ink-400 text-xs">
+                            {state.settings.currency} {formatMoney(metrics.remaining)} remaining
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="h-3 bg-surface-300 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${getProgressColor(metrics.progress)} transition-all duration-500 rounded-full`}
+                        style={{ width: `${metrics.progress}%` }}
+                      />
+                    </div>
+                    {metrics.progress >= 100 && (
+                      <div className="text-green-400 text-sm font-medium text-center mt-1">
+                        Goal reached!
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* === FUNDED EXPENSE GOAL — new stacked bar === */
+                  <div className="space-y-2">
+                    {/* Headline figures */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-end">
+                        <span className="text-2xl font-bold text-ink-50">{metrics.fundingProgress.toFixed(1)}%</span>
+                        <span className="text-ink-300 text-xs">
+                          Funded: {state.settings.currency} {formatMoney(metrics.funded)} of {formatMoney(goal.targetAmount)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-ink-400 flex flex-wrap gap-x-3">
+                        <span>Spent: {state.settings.currency} {formatMoney(metrics.spent)}</span>
+                        <span className={metrics.available < 0 ? 'text-amber-400' : undefined}>
+                          Available: {state.settings.currency} {formatMoney(metrics.available)}
+                        </span>
+                        <span>Still to fund: {state.settings.currency} {formatMoney(metrics.unfunded)}</span>
+                        <span>Left to spend: {state.settings.currency} {formatMoney(metrics.remainingToSpend)}</span>
+                      </div>
+                    </div>
+
+                    {/* Stacked progress bar */}
+                    <div className="h-4 bg-surface-300 rounded-full overflow-hidden flex">
+                      {metrics.spentPercent > 0 && (
+                        <div
+                          className="h-full bg-violet-500 transition-all duration-500"
+                          style={{ width: `${Math.min(metrics.spentPercent, 100)}%` }}
+                          title={`Spent: ${state.settings.currency} ${formatMoney(metrics.spent)}`}
+                        />
+                      )}
+                      {metrics.availablePercent > 0 && (
+                        <div
+                          className="h-full bg-emerald-500 transition-all duration-500"
+                          style={{ width: `${Math.min(metrics.availablePercent, 100 - Math.min(metrics.spentPercent, 100))}%` }}
+                          title={`Available: ${state.settings.currency} ${formatMoney(metrics.available)}`}
+                        />
                       )}
                     </div>
-                  </div>
-                  <div className="h-3 bg-surface-300 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${getProgressColor(progress)} transition-all duration-500 rounded-full`}
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  {progress >= 100 && (
-                    <div className="text-green-400 text-sm font-medium text-center mt-1">
-                      Goal reached!
+
+                    {/* Legend */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-300">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-violet-500 inline-block" />
+                        Spent {metrics.spentPercent.toFixed(1)}%
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
+                        Available {metrics.availablePercent.toFixed(1)}%
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-surface-300 inline-block" />
+                        Unfunded {metrics.unfundedPercent.toFixed(1)}%
+                      </span>
                     </div>
-                  )}
-                </div>
+
+                    {/* Fully funded badge */}
+                    {metrics.isFullyFunded && (
+                      <div className="text-green-400 text-sm font-medium text-center mt-1">
+                        Fully funded!
+                      </div>
+                    )}
+
+                    {/* Over-budget indicator */}
+                    {metrics.isOverBudget && (
+                      <div className="flex items-center justify-center gap-1.5 text-amber-400 text-sm font-medium mt-1">
+                        <FaExclamationTriangle className="text-xs" />
+                        Over budget by {state.settings.currency} {formatMoney(metrics.overage)}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Contributions Section — filtered month view */}
                 {isFiltering && (
                   <div className="mt-4 border-t border-surface-300 pt-3">
+                    {renderFilterTabs(goal.id, metrics.isFundedExpense)}
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span className="font-medium text-ink-200">
-                        {monthLabel} ({monthEntries.length})
+                        {monthLabel} ({filterContributions(monthEntries, currentFilter).length})
+                        {renderFilterSummary(monthEntries, currentFilter)}
                       </span>
                       <span className={`${goalMonthTotal < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
                         {goalMonthTotal < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(goalMonthTotal))}
                       </span>
                     </div>
                     <div className="space-y-1.5">
-                      {[...monthEntries].reverse().map(({ c: contribution, i: actualIndex }) => (
-                        <div key={actualIndex} className="flex items-center justify-between text-sm bg-surface-200/50 rounded-lg px-3 py-2 group">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-ink-300 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
-                              {contribution.note && (
-                                <span className="text-ink-400 text-xs truncate">- {contribution.note}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-3">
-                            <span className={`${contribution.amount < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
-                              {contribution.amount < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(contribution.amount))}
-                            </span>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => handleEditContribution(goal, actualIndex)}
-                                className="p-1 text-ink-300 hover:text-blue-400 transition-colors"
-                                title="Edit contribution"
-                              >
-                                <FaEdit className="text-xs" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteContribution(goal, actualIndex)}
-                                className="p-1 text-ink-300 hover:text-red-400 transition-colors"
-                                title="Delete contribution"
-                              >
-                                <FaTrash className="text-xs" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                      {[...filterContributions(monthEntries, currentFilter)].reverse().map(({ c: contribution, i: actualIndex }) =>
+                        renderContributionRow(contribution, actualIndex, goal, true)
+                      )}
                     </div>
                   </div>
                 )}
@@ -435,12 +651,14 @@ export default function Goals() {
                 {/* Contributions Section */}
                 {!isFiltering && contributionCount > 0 && (
                   <div className="mt-4 border-t border-surface-300 pt-3">
+                    {renderFilterTabs(goal.id, metrics.isFundedExpense)}
                     <button
                       onClick={() => setExpandedGoalId(isExpanded ? null : goal.id)}
                       className="flex items-center justify-between w-full text-sm text-ink-200 hover:text-white transition-colors"
                     >
                       <span className="font-medium">
-                        Transactions ({contributionCount})
+                        Transactions ({filterContributions(allEntries, currentFilter).length})
+                        {renderFilterSummary(allEntries, currentFilter)}
                       </span>
                       {isExpanded ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />}
                     </button>
@@ -448,66 +666,18 @@ export default function Goals() {
                     {/* Always show last 2 contributions when collapsed */}
                     {!isExpanded && (
                       <div className="mt-2 space-y-1.5">
-                        {goal.contributions!.slice(-2).reverse().map((contribution: Contribution, idx: number) => {
-                          const actualIndex = goal.contributions!.length - 1 - idx;
-                          return (
-                            <div key={actualIndex} className="flex items-center justify-between text-sm bg-surface-200/50 rounded-lg px-3 py-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-ink-300 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
-                                  {contribution.note && (
-                                    <span className="text-ink-400 text-xs truncate">- {contribution.note}</span>
-                                  )}
-                                </div>
-                              </div>
-                              <span className={`${contribution.amount < 0 ? 'text-red-400' : 'text-green-400'} font-medium ml-3`}>
-                                {contribution.amount < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(contribution.amount))}
-                              </span>
-                            </div>
-                          );
-                        })}
+                        {filterContributions(allEntries, currentFilter).slice(-2).reverse().map(({ c: contribution, i: actualIndex }) =>
+                          renderContributionRow(contribution, actualIndex, goal, false)
+                        )}
                       </div>
                     )}
 
                     {/* Expanded: show all contributions with edit/delete */}
                     {isExpanded && (
                       <div className="mt-2 space-y-1.5">
-                        {[...goal.contributions!].reverse().map((contribution: Contribution, reverseIdx: number) => {
-                          const actualIndex = goal.contributions!.length - 1 - reverseIdx;
-                          return (
-                            <div key={actualIndex} className="flex items-center justify-between text-sm bg-surface-200/50 rounded-lg px-3 py-2 group">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-ink-300 text-xs">{new Date(contribution.date).toLocaleDateString()}</span>
-                                  {contribution.note && (
-                                    <span className="text-ink-400 text-xs truncate">- {contribution.note}</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 ml-3">
-                                <span className={`${contribution.amount < 0 ? 'text-red-400' : 'text-green-400'} font-medium`}>
-                                  {contribution.amount < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(contribution.amount))}
-                                </span>
-                                <div className="flex gap-1">
-                                  <button
-                                    onClick={() => handleEditContribution(goal, actualIndex)}
-                                    className="p-1 text-ink-300 hover:text-blue-400 transition-colors"
-                                    title="Edit contribution"
-                                  >
-                                    <FaEdit className="text-xs" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteContribution(goal, actualIndex)}
-                                    className="p-1 text-ink-300 hover:text-red-400 transition-colors"
-                                    title="Delete contribution"
-                                  >
-                                    <FaTrash className="text-xs" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {[...filterContributions(allEntries, currentFilter)].reverse().map(({ c: contribution, i: actualIndex }) =>
+                          renderContributionRow(contribution, actualIndex, goal, true)
+                        )}
                       </div>
                     )}
                   </div>
