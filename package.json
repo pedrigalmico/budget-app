@@ -8,8 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
-    "emulators": "firebase emulators:start --import=./.emulator-data --export-on-exit=./.emulator-data",
-    "seed": "node scripts/seed-emulator.mjs"
+    "emulators": "firebase emulators:start --project budgeting-app-221d6 --only auth,firestore --import=./.emulator-data --export-on-exit=./.emulator-data",
+    "seed": "node scripts/seed-emulator.mjs",
+    "emulators:fresh": "firebase emulators:start --project budgeting-app-221d6 --only auth,firestore --export-on-exit=./.emulator-data"
   },
   "dependencies": {
     "firebase": "^11.6.0",

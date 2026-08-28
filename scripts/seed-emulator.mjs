@@ -8,7 +8,9 @@
  * Refuses to run against anything that is not a local emulator.
  */
 import fs from 'node:fs';
-import admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 const SRC = process.argv[2];
 if (!SRC) {
@@ -30,13 +32,13 @@ const UID = process.env.SEED_UID || 'VfPDeVOKLCemeUDQX5aY4ALLptL2';
 const EMAIL = process.env.SEED_EMAIL || 'dev@local.test';
 const PASSWORD = process.env.SEED_PASSWORD || 'devpassword';
 
-admin.initializeApp({ projectId: 'budgeting-app-221d6' });
+initializeApp({ projectId: 'budgeting-app-221d6' });
 
 const data = JSON.parse(fs.readFileSync(SRC, 'utf8'));
-await admin.firestore().collection('users').doc(UID).set(data);
+await getFirestore().collection('users').doc(UID).set(data);
 
 try {
-  await admin.auth().createUser({ uid: UID, email: EMAIL, password: PASSWORD });
+  await getAuth().createUser({ uid: UID, email: EMAIL, password: PASSWORD });
 } catch (err) {
   if (err.code !== 'auth/uid-already-exists' && err.code !== 'auth/email-already-exists') throw err;
 }
