@@ -14,7 +14,6 @@ import Settings from './pages/Settings';
 import Income from './pages/Income';
 import Reports from './pages/Reports';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 
 /**
  * Single source of truth for navigation. The sidebar uses `label`, the mobile
@@ -138,7 +137,9 @@ function AppContent() {
       <div className="app-shell dark">
         <Routes>
           <Route path="/login"  element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+          {/* /signup is deliberately unrouted: this is a private, two-person
+              app. Accounts are created in the Firebase console. */}
+          <Route path="/signup" element={<Navigate to="/login" replace />} />
 
           <Route path="/"            element={<PrivateRoute><AuthedShell><Home /></AuthedShell></PrivateRoute>} />
           <Route path="/income"      element={<PrivateRoute><AuthedShell><Income /></AuthedShell></PrivateRoute>} />

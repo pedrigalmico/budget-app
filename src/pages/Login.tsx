@@ -1,14 +1,29 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+
+  async function handleGoogle() {
+    try {
+      setError('');
+      setLoading(true);
+      await loginWithGoogle();
+      navigate('/');
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+      setError('Google sign-in failed. If this is your first time, sign in with your password and connect Google from Settings.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,11 +102,23 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-blue-500 hover:text-blue-400">
-            Sign Up
-          </Link>
+        <div className="mt-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-surface-300" />
+          <span className="text-xs text-ink-400">or</span>
+          <div className="h-px flex-1 bg-surface-300" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={loading}
+          className="btn btn-secondary w-full mt-4"
+        >
+          Continue with Google
+        </button>
+
+        <p className="mt-4 text-center text-xs text-ink-400">
+          Accounts are created by invitation only.
         </p>
       </div>
     </div>
