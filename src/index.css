@@ -162,14 +162,21 @@
   .bottom-nav-items { @apply flex justify-between items-stretch; }
 
   .nav-item {
-    @apply flex flex-col items-center justify-center gap-1 flex-1 py-2.5 text-[11px] font-medium
-           text-ink-400 transition-colors;
+    @apply flex flex-col items-center justify-center gap-1 flex-1 min-w-0 py-2.5
+           text-[10px] font-medium text-ink-400 transition-colors;
+  }
+  .nav-item-label { @apply truncate max-w-full; }
+  /* Seven items get tight on the narrowest phones (320px) — shrink the label
+     rather than ellipsize it. */
+  @media (max-width: 359px) {
+    .nav-item { @apply text-[9px] gap-0.5; }
+    .nav-item-icon { @apply h-6 w-8; }
   }
   .nav-item:hover { @apply text-ink-100; }
   .nav-item-active { @apply text-primary-400; }
   .nav-item-active .nav-item-icon { background: rgba(53,101,255,0.12); color: #86afff; }
   .nav-item-icon {
-    @apply flex items-center justify-center h-8 w-10 rounded-lg transition-colors;
+    @apply flex items-center justify-center h-7 w-9 rounded-lg transition-colors;
   }
 
   /* ===== Sidebar (desktop) ===== */

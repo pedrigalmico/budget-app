@@ -16,22 +16,20 @@ import Reports from './pages/Reports';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
+/**
+ * Single source of truth for navigation. The sidebar uses `label`, the mobile
+ * bottom bar uses `short` — previously these were two separate arrays, and the
+ * mobile one had silently dropped Income and Settings, leaving no way to reach
+ * either (including the data export) on a phone.
+ */
 const NAV_ITEMS = [
-  { to: '/',            label: 'Overview',    icon: FaHome },
-  { to: '/income',      label: 'Income',      icon: FaArrowUp },
-  { to: '/expenses',    label: 'Expenses',    icon: FaWallet },
-  { to: '/goals',       label: 'Goals',       icon: FaBullseye },
-  { to: '/investments', label: 'Investments', icon: FaChartLine },
-  { to: '/reports',     label: 'Reports',     icon: FaChartPie },
-  { to: '/settings',    label: 'Settings',    icon: FaCog },
-] as const;
-
-const MOBILE_NAV = [
-  { to: '/',            label: 'Home',     icon: FaHome },
-  { to: '/expenses',    label: 'Expenses', icon: FaWallet },
-  { to: '/investments', label: 'Invest',   icon: FaChartLine },
-  { to: '/goals',       label: 'Goals',    icon: FaBullseye },
-  { to: '/reports',     label: 'Reports',  icon: FaChartPie },
+  { to: '/',            label: 'Overview',    short: 'Home',     icon: FaHome },
+  { to: '/income',      label: 'Income',      short: 'Income',   icon: FaArrowUp },
+  { to: '/expenses',    label: 'Expenses',    short: 'Expenses', icon: FaWallet },
+  { to: '/goals',       label: 'Goals',       short: 'Goals',    icon: FaBullseye },
+  { to: '/investments', label: 'Investments', short: 'Invest',   icon: FaChartLine },
+  { to: '/reports',     label: 'Reports',     short: 'Reports',  icon: FaChartPie },
+  { to: '/settings',    label: 'Settings',    short: 'Settings', icon: FaCog },
 ] as const;
 
 function Sidebar() {
@@ -91,7 +89,7 @@ function MobileNav() {
     <nav className="bottom-nav">
       <div className="bottom-nav-container">
         <div className="bottom-nav-items">
-          {MOBILE_NAV.map(({ to, label, icon: Icon }) => {
+          {NAV_ITEMS.map(({ to, short, icon: Icon }) => {
             const active = to === '/' ? pathname === '/' : pathname.startsWith(to);
             return (
               <NavLink
@@ -101,7 +99,7 @@ function MobileNav() {
                 className={`nav-item ${active ? 'nav-item-active' : ''}`}
               >
                 <span className="nav-item-icon"><Icon size={16} /></span>
-                <span>{label}</span>
+                <span className="nav-item-label">{short}</span>
               </NavLink>
             );
           })}
