@@ -11,39 +11,8 @@ export default function Settings() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [exportStatus, setExportStatus] = useState('');
-  const [linkStatus, setLinkStatus] = useState('');
-  const { logout, currentUser, linkGoogle } = useAuth();
+  const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
-
-  /**
-   * Attach Google to the account already signed in. Every document is keyed by
-   * UID, so we capture the UID before and after and refuse to call it a success
-   * unless it is unchanged.
-   */
-  const handleLinkGoogle = useCallback(async () => {
-    const before = currentUser?.uid;
-    try {
-      setLinkStatus('Opening Google...');
-      await linkGoogle();
-      const after = currentUser?.uid;
-      setLinkStatus(
-        before === after
-          ? `Google connected. Account ID unchanged (${before?.slice(0, 8)}...) - your data is intact.`
-          : `WARNING: account ID changed (${before} -> ${after}). Do not continue; contact support.`
-      );
-    } catch (err) {
-      const code = (err as { code?: string }).code;
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        setLinkStatus('');
-        return;
-      }
-      if (code === 'auth/credential-already-in-use') {
-        setLinkStatus('That Google account is already attached to a different account.');
-        return;
-      }
-      setLinkStatus(`Could not connect Google: ${code ?? 'unknown error'}`);
-    }
-  }, [currentUser, linkGoogle]);
 
   const downloadFile = useCallback((content: string, filename: string, type: string) => {
     const blob = new Blob([content], { type });
@@ -489,30 +458,6 @@ export default function Settings() {
               <p className="text-sm text-ink-300">
                 Signed in as: {currentUser?.email}
               </p>
-
-              <div className="border-t border-surface-300 pt-4 space-y-2">
-                <p className="text-sm font-medium">Sign-in methods</p>
-                <p className="text-xs text-ink-400">
-                  {(currentUser?.providerData || []).map(p => p.providerId).join(', ') || 'none'}
-                </p>
-                {!(currentUser?.providerData || []).some(p => p.providerId === 'google.com') && (
-                  <>
-                    <button
-                      onClick={handleLinkGoogle}
-                      className="w-full btn btn-secondary"
-                    >
-                      Connect Google account
-                    </button>
-                    <p className="text-xs text-ink-400">
-                      Adds Google as a second way to sign in. Your account ID and all
-                      your data stay exactly as they are.
-                    </p>
-                  </>
-                )}
-                {linkStatus && (
-                  <p className="text-xs text-green-400">{linkStatus}</p>
-                )}
-              </div>
 
               <button
                 onClick={handleLogout}
