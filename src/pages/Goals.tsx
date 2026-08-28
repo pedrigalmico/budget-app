@@ -288,62 +288,17 @@ export default function Goals() {
     );
   };
 
-  return (
-    <div className="space-y-6 pb-20">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Savings Goals</h1>
-          <button
-            onClick={() => {
-              setEditingGoal(null);
-              setGoalTypeForm('savings');
-              setShowForm(!showForm);
-            }}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <FaPlus /> Add Goal
-          </button>
-        </div>
-
-        {/* Month Filter */}
-        <div className="card flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2 flex-1">
-            <FaCalendarAlt className="text-ink-300 shrink-0" />
-            <input
-              type="month"
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="input"
-              aria-label="Filter contributions by month"
-            />
-            {isFiltering && (
-              <button
-                onClick={() => setFilterMonth('')}
-                className="btn btn-secondary p-2 shrink-0"
-                title="Clear filter"
-              >
-                <FaTimes />
-              </button>
-            )}
-          </div>
-          {isFiltering && (
-            <div className="text-sm sm:text-right">
-              <span className="text-ink-300">{monthLabel}: </span>
-              <span className={`${monthlyTotal < 0 ? 'text-red-400' : 'text-green-400'} font-semibold`}>
-                {monthlyTotal < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(monthlyTotal))}
-              </span>
-              <span className="text-ink-400"> across {activeGoalsCount} goal{activeGoalsCount !== 1 ? 's' : ''}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Add Goal Form */}
-        {showForm && (
+  /**
+   * The goal form. Rendered at the top of the page when adding, and inline in
+   * place of the goal's own card when editing, so the form appears where the
+   * goal is rather than scrolled off the top.
+   */
+  const renderGoalForm = () => (
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">
               {editingGoal ? 'Edit Goal' : 'Add New Goal'}
             </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form key={editingGoal?.id || 'new'} onSubmit={handleSubmit} className="space-y-4">
               {/* Goal Type Toggle */}
               <div>
                 <label className="block text-sm font-medium mb-1">Goal Type</label>
@@ -465,11 +420,68 @@ export default function Goals() {
               )}
             </form>
           </div>
-        )}
+  );
+
+  return (
+    <div className="space-y-6 pb-20">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Savings Goals</h1>
+          <button
+            onClick={() => {
+              setEditingGoal(null);
+              setGoalTypeForm('savings');
+              setShowForm(!showForm);
+            }}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            <FaPlus /> Add Goal
+          </button>
+        </div>
+
+        {/* Month Filter */}
+        <div className="card flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <FaCalendarAlt className="text-ink-300 shrink-0" />
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="input"
+              aria-label="Filter contributions by month"
+            />
+            {isFiltering && (
+              <button
+                onClick={() => setFilterMonth('')}
+                className="btn btn-secondary p-2 shrink-0"
+                title="Clear filter"
+              >
+                <FaTimes />
+              </button>
+            )}
+          </div>
+          {isFiltering && (
+            <div className="text-sm sm:text-right">
+              <span className="text-ink-300">{monthLabel}: </span>
+              <span className={`${monthlyTotal < 0 ? 'text-red-400' : 'text-green-400'} font-semibold`}>
+                {monthlyTotal < 0 ? '-' : '+'}{state.settings.currency} {formatMoney(Math.abs(monthlyTotal))}
+              </span>
+              <span className="text-ink-400"> across {activeGoalsCount} goal{activeGoalsCount !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Add Goal Form — only at the top when adding; edits render in place */}
+        {showForm && !editingGoal && renderGoalForm()}
 
         {/* Goals List */}
         <div className="space-y-4">
           {state.goals.map(goal => {
+            // Editing this goal? Show the form here, where the goal is.
+            if (editingGoal?.id === goal.id) {
+              return <div key={goal.id}>{renderGoalForm()}</div>;
+            }
+
             const metrics = computeGoalMetrics(goal);
             const isExpanded = expandedGoalId === goal.id;
             const contributionCount = goal.contributions?.length || 0;
