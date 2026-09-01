@@ -50,6 +50,7 @@ export interface InvestmentLot {
   pricePerUnit: number;       // Price paid per unit (in purchaseCurrency)
   unitType: string;           // "shares", "grams", "units", "coins"
   purchaseCurrency?: string;  // "USD" or "SAR" — currency the purchase was made in
+  type?: 'buy' | 'sell';      // undefined = 'buy' (legacy lots predate sells)
   date: string;
   notes?: string;
   manualCurrentValue?: number;    // Manual override for lot value
@@ -74,13 +75,18 @@ export interface Position {
   ticker?: string;
   category: string;
   unitType: string;
-  totalQuantity: number;
-  avgCostBasis: number;
-  totalInvested: number;
+  totalQuantity: number;      // Units still held (buys − sells)
+  avgCostBasis: number;       // Average cost of the units still held
+  totalInvested: number;      // Cost basis of the units still held (open basis)
   currentPricePerUnit?: number;
   currentValue?: number;
-  returnAmount?: number;
-  returnPercentage?: number;
+  returnAmount?: number;      // Unrealized: currentValue − totalInvested
+  returnPercentage?: number;  // Unrealized, against open basis
+  realizedReturn: number;     // Proceeds − cost basis removed, across all sells
+  totalProceeds: number;      // Gross sale proceeds, in display currency
+  totalCostSold: number;      // Cost basis removed by sells
+  totalReturn?: number;       // realized + unrealized (undefined if no current price)
+  isClosed: boolean;          // Every unit has been sold
   lots: InvestmentLot[];
   useManualValuation: boolean;
 }

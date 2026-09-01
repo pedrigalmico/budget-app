@@ -3,10 +3,13 @@ import { useAppState } from '../hooks/useAppState';
 import { usePriceUpdates } from '../hooks/usePriceUpdates';
 import { InvestmentLot, Position } from '../types';
 import { INVESTMENT_CATEGORIES, UNIT_TYPES } from '../config/categories';
-import { groupLotsIntoPositions } from '../utils/investmentUtils';
+import {
+  groupLotsIntoPositions, getOpenPositions, getClosedPositions,
+  getPortfolioTotals, getLastSaleTime,
+} from '../utils/investmentUtils';
 import {
   FaPlus, FaEdit, FaTrash, FaChevronDown, FaChevronUp,
-  FaTimes, FaSyncAlt, FaCheck, FaPencilAlt, FaClock,
+  FaTimes, FaSyncAlt, FaCheck, FaPencilAlt, FaClock, FaSignOutAlt,
 } from 'react-icons/fa';
 
 // Categories where manual price entry is the primary UX (no API ticker)
@@ -87,19 +90,28 @@ export default function Investments() {
   const [pricingPosition,  setPricingPosition]  = useState<string | null>(null); // positionKey being priced
   const [manualPriceInput, setManualPriceInput] = useState<string>('');
 
+  // ── sell state ────────────────────────────────────────────────────
+  const [sellingPosition, setSellingPosition] = useState<string | null>(null); // positionKey being sold
+  const [sellQuantity,    setSellQuantity]    = useState<string>('');
+  const [sellPrice,       setSellPrice]       = useState<string>('');
+  const [sellCurrency,    setSellCurrency]    = useState<string>('USD');
+  const [sellDate,        setSellDate]        = useState<string>('');
+  const [sellNotes,       setSellNotes]       = useState<string>('');
+  const [showClosed,      setShowClosed]      = useState(false);
+
   // ── derived data ──────────────────────────────────────────────────
   const positions = useMemo(() =>
     groupLotsIntoPositions(state.investments, state.priceCache, usdToSarRate, displayCurrency),
     [state.investments, state.priceCache, usdToSarRate, displayCurrency],
   );
 
-  const portfolioTotals = useMemo(() => {
-    const totalInvested     = positions.reduce((s, p) => s + p.totalInvested, 0);
-    const totalCurrentValue = positions.reduce((s, p) => s + (p.currentValue ?? p.totalInvested), 0);
-    const totalReturn       = totalCurrentValue - totalInvested;
-    const totalReturnPct    = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
-    return { totalInvested, totalCurrentValue, totalReturn, totalReturnPct };
-  }, [positions]);
+  const openPositions   = useMemo(() => getOpenPositions(positions), [positions]);
+  const closedPositions = useMemo(() => getClosedPositions(positions), [positions]);
+  const portfolioTotals = useMemo(() => getPortfolioTotals(positions), [positions]);
+  const closedRealized  = useMemo(
+    () => closedPositions.reduce((s, p) => s + p.realizedReturn, 0),
+    [closedPositions],
+  );
 
   // ── effects ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -188,10 +200,82 @@ export default function Investments() {
   };
 
   const handleDeletePosition = (positionKey: string) => {
-    if (window.confirm('Delete this entire position and all its lots?')) {
+    if (window.confirm('Delete this position and all its lots? This erases its history — to record a sale, use Sell instead.')) {
       deletePosition(positionKey); setExpandedPosition(null);
     }
   };
+
+  // ── sell handlers ─────────────────────────────────────────────────
+  const openSellPanel = (position: Position) => {
+    setSellingPosition(position.positionKey);
+    setSellQuantity('');
+    // Prefill with the live price per unit, in the position's own trading currency
+    const lastBuy = [...position.lots].reverse().find(l => l.type !== 'sell');
+    const currency = lastBuy?.purchaseCurrency || displayCurrency;
+    setSellCurrency(currency);
+    const priceInDisplay = position.currentPricePerUnit;
+    if (priceInDisplay !== undefined) {
+      const rate = (currency === 'USD' && displayCurrency === 'SAR') ? usdToSarRate : 1;
+      setSellPrice((priceInDisplay / rate).toFixed(4).replace(/\.?0+$/, ''));
+    } else {
+      setSellPrice('');
+    }
+    setSellDate(new Date().toISOString().split('T')[0]);
+    setSellNotes('');
+    setExpandedPosition(position.positionKey);
+  };
+
+  const closeSellPanel = () => {
+    setSellingPosition(null);
+    setSellQuantity(''); setSellPrice(''); setSellNotes('');
+  };
+
+  const handleSell = (position: Position) => {
+    const qty   = parseFloat(sellQuantity);
+    const price = parseFloat(sellPrice);
+    if (!qty || qty <= 0 || !price || price <= 0) return;
+    if (qty > position.totalQuantity + 1e-8) return;
+
+    const sellLot: InvestmentLot = {
+      id: crypto.randomUUID(),
+      positionKey: position.positionKey,
+      name: position.name,
+      ticker: position.ticker,
+      category: position.category,
+      quantity: qty,
+      pricePerUnit: price,
+      unitType: position.unitType,
+      purchaseCurrency: sellCurrency,
+      type: 'sell',
+      date: new Date(sellDate).toISOString(),
+      notes: sellNotes.trim() || undefined,
+    };
+
+    addInvestmentLot(sellLot);
+    closeSellPanel();
+  };
+
+  /** Proceeds and realized P/L preview for the sell form, in display currency */
+  const sellPreview = useMemo(() => {
+    const position = positions.find(p => p.positionKey === sellingPosition);
+    if (!position) return null;
+    const qty   = parseFloat(sellQuantity);
+    const price = parseFloat(sellPrice);
+    if (!qty || qty <= 0 || !price || price <= 0) return null;
+
+    const rate = (sellCurrency === 'USD' && displayCurrency === 'SAR') ? usdToSarRate : 1;
+    const proceeds  = qty * price * rate;
+    const basisSold = position.avgCostBasis * qty;
+    const remaining = position.totalQuantity - qty;
+    return {
+      proceeds,
+      realized: proceeds - basisSold,
+      realizedPct: basisSold > 0 ? ((proceeds - basisSold) / basisSold) * 100 : 0,
+      remaining: remaining < 1e-8 ? 0 : remaining,
+      closesPosition: remaining < 1e-8,
+      oversold: qty > position.totalQuantity + 1e-8,
+    };
+  }, [positions, sellingPosition, sellQuantity, sellPrice, sellCurrency, displayCurrency, usdToSarRate]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -276,7 +360,9 @@ export default function Investments() {
               <option value="new">+ Create New Position</option>
               {positions.map(pos => (
                 <option key={pos.positionKey} value={pos.positionKey}>
-                  {pos.name} {pos.ticker ? `(${pos.ticker})` : ''} — {pos.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {pos.unitType}
+                  {pos.name} {pos.ticker ? `(${pos.ticker})` : ''} — {pos.isClosed
+                    ? 'closed — buy back'
+                    : `${pos.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} ${pos.unitType}`}
                 </option>
               ))}
             </select>
@@ -460,6 +546,125 @@ export default function Investments() {
     );
   };
 
+  // ── sell / close panel ────────────────────────────────────────────
+  const renderSellPanel = (position: Position) => {
+    const unit = position.unitType.replace(/s$/, '');
+    const currencies = ['USD', displayCurrency].filter((v, i, a) => a.indexOf(v) === i);
+    const canSubmit = !!sellPreview && !sellPreview.oversold;
+
+    return (
+      <div className="mt-4 border-t border-amber-500/20 pt-4 space-y-3">
+        <div className="flex justify-between items-center">
+          <h4 className="text-sm font-semibold">
+            {sellPreview?.closesPosition ? 'Close' : 'Sell'} {position.name}
+          </h4>
+          <button onClick={closeSellPanel} className="btn btn-ghost btn-icon"><FaTimes size={12} /></button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Quantity ({position.unitType})</label>
+            <div className="flex gap-2">
+              <input type="number" min="0" step="any" autoFocus className="input flex-1"
+                placeholder={position.totalQuantity.toFixed(4).replace(/\.?0+$/, '')}
+                value={sellQuantity} onChange={e => setSellQuantity(e.target.value)} />
+              <button type="button" onClick={() => setSellQuantity(String(position.totalQuantity))}
+                className="btn btn-secondary btn-sm whitespace-nowrap">Sell all</button>
+            </div>
+            <p className="text-xs text-ink-400 mt-1">
+              Holding {position.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {position.unitType}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Sale price / {unit} ({sellCurrency})</label>
+            <input type="number" min="0" step="any" className="input"
+              placeholder="e.g. 172.40" value={sellPrice} onChange={e => setSellPrice(e.target.value)} />
+            {position.currentPricePerUnit !== undefined && (
+              <p className="text-xs text-ink-400 mt-1">Prefilled from the latest price</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Sale currency</label>
+            <div className="flex gap-2">
+              {currencies.map(cur => (
+                <button key={cur} type="button" onClick={() => setSellCurrency(cur)}
+                  className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors border
+                    ${sellCurrency === cur
+                      ? 'bg-primary-600 text-white border-primary-500'
+                      : 'btn-secondary border-white/8'}`}>
+                  {cur}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Sale date</label>
+            <input type="date" className="input" value={sellDate} onChange={e => setSellDate(e.target.value)} />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Notes <span className="text-ink-400 font-normal">(optional)</span></label>
+          <input type="text" className="input" placeholder="e.g. rebalancing out of defense"
+            value={sellNotes} onChange={e => setSellNotes(e.target.value)} />
+        </div>
+
+        {/* Live preview */}
+        {sellPreview && (
+          <div className={`rounded-xl p-3 border ${sellPreview.oversold
+            ? 'bg-accent-red/10 border-accent-red/30'
+            : 'bg-surface-200 border-white/5'}`}>
+            {sellPreview.oversold ? (
+              <p className="text-xs text-accent-red">
+                You only hold {position.totalQuantity.toFixed(4).replace(/\.?0+$/, '')} {position.unitType}.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-ink-300">Proceeds</span>
+                  <span className="text-sm font-medium">{displayCurrency} {formatMoney(sellPreview.proceeds)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-ink-300">Realized return</span>
+                  <span className={`text-sm font-semibold ${sellPreview.realized >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                    {sellPreview.realized >= 0 ? '+' : ''}{displayCurrency} {formatMoney(sellPreview.realized)}
+                    <span className="ml-2 text-xs">
+                      ({sellPreview.realized >= 0 ? '+' : ''}{sellPreview.realizedPct.toFixed(2)}%)
+                    </span>
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-ink-400">After this sale</span>
+                  <span className="text-xs text-ink-400">
+                    {sellPreview.closesPosition
+                      ? 'Position closed — moves to Closed Positions'
+                      : `${sellPreview.remaining.toFixed(4).replace(/\.?0+$/, '')} ${position.unitType} left`}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <p className="text-xs text-ink-400">
+          The sale is recorded as a lot, so cost basis and realized return are kept. Proceeds are not added to
+          income — log an income entry only if you actually withdrew the cash.
+        </p>
+
+        <div className="flex gap-2">
+          <button type="button" onClick={() => handleSell(position)} disabled={!canSubmit}
+            className={`btn flex-1 ${canSubmit ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'}`}>
+            {sellPreview?.closesPosition ? 'Close Position' : 'Record Sale'}
+          </button>
+          <button type="button" onClick={closeSellPanel} className="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    );
+  };
+
   // ── main render ───────────────────────────────────────────────────
   return (
     <div className="space-y-6 pb-20">
@@ -472,7 +677,7 @@ export default function Investments() {
       </div>
 
       {/* Portfolio Summary */}
-      {positions.length > 0 && (
+      {openPositions.length > 0 && (
         <div className="card">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-sm font-medium text-ink-300">Portfolio Summary</h2>
@@ -499,13 +704,28 @@ export default function Investments() {
                 <div className="text-sm font-semibold">{displayCurrency} {formatMoney(value)}</div>
               </div>
             ))}
-            <div className={`rounded-xl p-3 ${portfolioTotals.totalReturn >= 0 ? 'bg-accent-green/10' : 'bg-accent-red/10'}`}>
+            <div className={`rounded-xl p-3 ${portfolioTotals.unrealizedReturn >= 0 ? 'bg-accent-green/10' : 'bg-accent-red/10'}`}>
               <div className="stat-label mb-1">Return</div>
-              <div className={`text-sm font-semibold ${portfolioTotals.totalReturn >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                {portfolioTotals.totalReturn >= 0 ? '+' : ''}{portfolioTotals.totalReturnPct.toFixed(1)}%
+              <div className={`text-sm font-semibold ${portfolioTotals.unrealizedReturn >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                {portfolioTotals.unrealizedReturn >= 0 ? '+' : ''}{portfolioTotals.unrealizedReturnPct.toFixed(1)}%
               </div>
             </div>
           </div>
+
+          {/* Realized gains from sales — only once something has been sold */}
+          {portfolioTotals.realizedReturn !== 0 && (
+            <div className="mt-3 flex items-center justify-between rounded-xl px-3 py-2 bg-surface-200">
+              <span className="text-xs text-ink-300">Realized (from sales)</span>
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-semibold ${portfolioTotals.realizedReturn >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                  {portfolioTotals.realizedReturn >= 0 ? '+' : ''}{displayCurrency} {formatMoney(portfolioTotals.realizedReturn)}
+                </span>
+                <span className="text-xs text-ink-400">
+                  total {portfolioTotals.totalReturn >= 0 ? '+' : ''}{displayCurrency} {formatMoney(portfolioTotals.totalReturn)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -514,7 +734,7 @@ export default function Investments() {
 
       {/* Position Cards */}
       <div className="space-y-4">
-        {positions.map(position => {
+        {openPositions.map(position => {
           const cacheKey = position.ticker || position.positionKey;
           const cached   = state.priceCache?.[cacheKey];
 
@@ -561,6 +781,11 @@ export default function Investments() {
                     <button onClick={() => handleAddToPosition(position)} className="btn btn-ghost btn-icon" title="Add lot">
                       <FaPlus size={12} />
                     </button>
+                    <button
+                      onClick={() => sellingPosition === position.positionKey ? closeSellPanel() : openSellPanel(position)}
+                      className="btn btn-ghost btn-icon" title="Sell / close position">
+                      <FaSignOutAlt size={12} />
+                    </button>
                     <button onClick={() => setExpandedPosition(expandedPosition === position.positionKey ? null : position.positionKey)}
                       className="btn btn-ghost btn-icon" title="Show lots">
                       {expandedPosition === position.positionKey ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
@@ -601,6 +826,16 @@ export default function Investments() {
                 </div>
               )}
 
+              {/* Realized return from earlier partial sales */}
+              {position.realizedReturn !== 0 && (
+                <div className="mt-2 flex items-center justify-between px-3">
+                  <span className="text-xs text-ink-400">Realized from sales</span>
+                  <span className={`text-xs font-medium ${position.realizedReturn >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                    {position.realizedReturn >= 0 ? '+' : ''}{displayCurrency} {formatMoney(position.realizedReturn)}
+                  </span>
+                </div>
+              )}
+
               {/* ── Manual price panel (Gold, Real Estate, no-ticker) ── */}
               {renderManualPricePanel(position)}
 
@@ -620,7 +855,7 @@ export default function Investments() {
               {expandedPosition === position.positionKey && (
                 <div className="mt-4 border-t border-white/5 pt-3">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-medium text-ink-400">Purchase Lots ({position.lots.length})</span>
+                    <span className="text-xs font-medium text-ink-400">Lots ({position.lots.length})</span>
                     <button onClick={() => handleDeletePosition(position.positionKey)}
                       className="text-xs text-red-400/70 hover:text-red-400 flex items-center gap-1">
                       <FaTrash size={10} /> Delete Position
@@ -628,13 +863,19 @@ export default function Investments() {
                   </div>
                   <div className="space-y-2">
                     {position.lots.map(lot => (
-                      <div key={lot.id} className="flex justify-between items-center rounded-xl p-2.5 bg-surface-200">
+                      <div key={lot.id} className={`flex justify-between items-center rounded-xl p-2.5 ${
+                        lot.type === 'sell' ? 'bg-amber-500/5 border border-amber-500/20' : 'bg-surface-200'}`}>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm">
-                            {lot.quantity.toFixed(4).replace(/\.?0+$/, '')} {lot.unitType} @ {lot.purchaseCurrency || displayCurrency} {formatMoney(lot.pricePerUnit)}
+                          <div className="text-sm flex items-center gap-2 flex-wrap">
+                            {lot.type === 'sell' && (
+                              <span className="chip text-[10px] px-2 py-0.5 text-amber-400 bg-amber-500/10">SOLD</span>
+                            )}
+                            <span>
+                              {lot.quantity.toFixed(4).replace(/\.?0+$/, '')} {lot.unitType} @ {lot.purchaseCurrency || displayCurrency} {formatMoney(lot.pricePerUnit)}
+                            </span>
                           </div>
                           <div className="text-xs text-ink-400">
-                            {new Date(lot.date).toLocaleDateString()} · Total: {displayCurrency} {formatLotValue(lot)}
+                            {new Date(lot.date).toLocaleDateString()} · {lot.type === 'sell' ? 'Proceeds' : 'Total'}: {displayCurrency} {formatLotValue(lot)}
                             {lot.purchaseCurrency === 'USD' && displayCurrency === 'SAR' && (
                               <span className="text-ink-500"> (${formatMoney(lot.quantity * lot.pricePerUnit)})</span>
                             )}
@@ -659,17 +900,120 @@ export default function Investments() {
               {formTargetPositionKey === position.positionKey && (
                 <div className="mt-4 border-t border-primary-500/20 pt-4">{renderLotForm()}</div>
               )}
+
+              {/* Sell / close panel */}
+              {sellingPosition === position.positionKey && renderSellPanel(position)}
             </div>
           );
         })}
 
-        {positions.length === 0 && !showForm && (
+        {openPositions.length === 0 && closedPositions.length === 0 && !showForm && (
           <div className="card text-center py-12 text-ink-400">
             <p className="text-sm">No investments yet.</p>
             <button onClick={handleNewPosition} className="btn btn-primary mt-4">Add your first investment</button>
           </div>
         )}
+
+        {openPositions.length === 0 && closedPositions.length > 0 && !showForm && (
+          <div className="card text-center py-8 text-ink-400">
+            <p className="text-sm">Nothing held right now — everything below has been sold.</p>
+            <button onClick={handleNewPosition} className="btn btn-primary mt-4">Add an investment</button>
+          </div>
+        )}
       </div>
+
+      {/* Closed positions */}
+      {closedPositions.length > 0 && (
+        <div className="card">
+          <button onClick={() => setShowClosed(!showClosed)}
+            className="w-full flex justify-between items-center text-left">
+            <div>
+              <h2 className="text-sm font-medium text-ink-300">Closed Positions ({closedPositions.length})</h2>
+              <p className="text-xs text-ink-400 mt-0.5">
+                Realized{' '}
+                <span className={closedRealized >= 0 ? 'text-accent-green' : 'text-accent-red'}>
+                  {closedRealized >= 0 ? '+' : ''}{displayCurrency} {formatMoney(closedRealized)}
+                </span>
+              </p>
+            </div>
+            {showClosed ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
+          </button>
+
+          {showClosed && (
+            <div className="mt-4 space-y-3">
+              {closedPositions.map(position => {
+                const lastSale = getLastSaleTime(position);
+                const firstBuy = position.lots.find(l => l.type !== 'sell');
+                const pct = position.totalCostSold > 0
+                  ? (position.realizedReturn / position.totalCostSold) * 100 : 0;
+                const isExpanded = expandedPosition === position.positionKey;
+
+                return (
+                  <div key={position.positionKey} className="rounded-xl p-3 bg-surface-200">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-medium text-sm truncate">{position.name}</h3>
+                          {position.ticker && (
+                            <span className="chip text-[10px] px-2 py-0.5">{position.ticker}</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-ink-400 mt-0.5">
+                          {firstBuy && `${new Date(firstBuy.date).toLocaleDateString()} → `}
+                          {lastSale ? new Date(lastSale).toLocaleDateString() : '—'}
+                          {' · '}cost {displayCurrency} {formatMoney(position.totalCostSold)}
+                          {' → '}sold {displayCurrency} {formatMoney(position.totalProceeds)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right">
+                          <div className={`text-sm font-semibold ${position.realizedReturn >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                            {position.realizedReturn >= 0 ? '+' : ''}{displayCurrency} {formatMoney(position.realizedReturn)}
+                          </div>
+                          <div className={`text-xs ${position.realizedReturn >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                            {position.realizedReturn >= 0 ? '+' : ''}{pct.toFixed(2)}%
+                          </div>
+                        </div>
+                        <button onClick={() => setExpandedPosition(isExpanded ? null : position.positionKey)}
+                          className="btn btn-ghost btn-icon" title="Show lots">
+                          {isExpanded ? <FaChevronUp size={11} /> : <FaChevronDown size={11} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="mt-3 border-t border-white/5 pt-3 space-y-2">
+                        {position.lots.map(lot => (
+                          <div key={lot.id} className="flex justify-between items-center text-xs">
+                            <span className={lot.type === 'sell' ? 'text-amber-400' : 'text-ink-300'}>
+                              {lot.type === 'sell' ? 'Sold' : 'Bought'}{' '}
+                              {lot.quantity.toFixed(4).replace(/\.?0+$/, '')} {lot.unitType}
+                              {' @ '}{lot.purchaseCurrency || displayCurrency} {formatMoney(lot.pricePerUnit)}
+                            </span>
+                            <span className="text-ink-400 flex items-center gap-2">
+                              {new Date(lot.date).toLocaleDateString()}
+                              <button onClick={() => handleDeleteLot(lot.id)}
+                                className="text-red-400/60 hover:text-red-400" title="Delete lot">
+                                <FaTrash size={10} />
+                              </button>
+                            </span>
+                          </div>
+                        ))}
+                        <div className="flex justify-end pt-1">
+                          <button onClick={() => handleDeletePosition(position.positionKey)}
+                            className="text-xs text-red-400/70 hover:text-red-400 flex items-center gap-1">
+                            <FaTrash size={10} /> Delete history
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </div>
   );

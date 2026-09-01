@@ -3,7 +3,7 @@ import { useAppState } from '../hooks/useAppState';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FaMoneyBillWave, FaChartLine, FaPiggyBank, FaWallet, FaBullseye, FaArrowRight } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { groupLotsIntoPositions } from '../utils/investmentUtils';
+import { groupLotsIntoPositions, getOpenPositions } from '../utils/investmentUtils';
 
 type ViewType = 'month' | 'ytd' | 'year';
 type Category = 'income' | 'expenses' | 'investments' | 'goals';
@@ -55,7 +55,7 @@ export default function Home() {
   }, [state.expenses, selectedMonth, selectedYear]);
 
   const totalInvestments = useMemo(() => {
-    const positions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+    const positions = getOpenPositions(groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency));
     return positions.reduce((sum, pos) => sum + (pos.currentValue ?? pos.totalInvested), 0);
   }, [state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency]);
 
@@ -190,11 +190,12 @@ export default function Home() {
 
     // Investment growth/decline
     const investmentPositions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+    // Counts realized gains from closed positions alongside unrealized ones
     const totalInvestmentGrowth = investmentPositions.reduce((sum, pos) => {
-      if (pos.returnAmount !== undefined) {
-        return sum + pos.returnAmount;
+      if (pos.totalReturn !== undefined) {
+        return sum + pos.totalReturn;
       }
-      return sum;
+      return sum + pos.realizedReturn;
     }, 0);
 
     if (totalInvestmentGrowth !== 0) {

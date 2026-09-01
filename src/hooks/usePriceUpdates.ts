@@ -31,17 +31,27 @@ export function usePriceUpdates(
 
   /**
    * Get list of tickers that need price updates.
-   * Only includes positions with tickers, not using manual valuation,
-   * and whose cached prices are stale.
+   * Only includes positions with tickers that are still held, not using
+   * manual valuation, and whose cached prices are stale.
    */
   const getStaleTickers = useCallback(
     (forceAll: boolean = false): string[] => {
       const tickerSet = new Set<string>();
 
+      // Net quantity per position — fully sold positions don't need a price,
+      // and refreshing them would burn Alpha Vantage quota for nothing.
+      const heldByPosition = new Map<string, number>();
+      for (const lot of investments) {
+        const qty = Number(lot.quantity) || 0;
+        const signed = lot.type === 'sell' ? -qty : qty;
+        heldByPosition.set(lot.positionKey, (heldByPosition.get(lot.positionKey) || 0) + signed);
+      }
+
       for (const lot of investments) {
         if (
           lot.ticker &&
-          !lot.useManualValuation
+          !lot.useManualValuation &&
+          (heldByPosition.get(lot.positionKey) || 0) > 1e-8
         ) {
           // If forcing refresh or price is stale, include it
           if (forceAll || isPriceStale(priceCache?.[lot.ticker], 6)) {
@@ -142,11 +152,9 @@ export function usePriceUpdates(
   const hasStaleData = staleTickers.length > 0;
 
   /**
-   * Whether any investment has a ticker configured for auto pricing.
+   * Whether any position still held has a ticker configured for auto pricing.
    */
-  const hasAutoTickers = investments.some(
-    (lot) => lot.ticker && !lot.useManualValuation
-  );
+  const hasAutoTickers = getStaleTickers(true).length > 0;
 
   return {
     ...updateState,

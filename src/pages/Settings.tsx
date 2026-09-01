@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import type { Settings as SettingsType } from '../types';
 import { DEFAULT_CATEGORIES, createCategory } from '../config/categories';
-import { groupLotsIntoPositions } from '../utils/investmentUtils';
+import { groupLotsIntoPositions, getOpenPositions } from '../utils/investmentUtils';
 
 export default function Settings() {
   const { state, updateSettings, clearData, formatMoney } = useAppState();
@@ -62,7 +62,9 @@ export default function Settings() {
     });
 
     // Investment calculations using positions
-    const positions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+    const allPositions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+    const positions = getOpenPositions(allPositions);
+    const realizedReturn = allPositions.reduce((s, p) => s + p.realizedReturn, 0);
     const totalInvested = positions.reduce((s, p) => s + p.totalInvested, 0);
     const totalCurrentValue = positions.reduce((s, p) => s + (p.currentValue ?? p.totalInvested), 0);
 
@@ -125,13 +127,25 @@ export default function Settings() {
     text += `## Investment Portfolio\n`;
     text += `Total Invested: ${formatMoney(totalInvested)} ${currency}\n`;
     text += `Current Value: ${formatMoney(totalCurrentValue)} ${currency}\n`;
-    text += `Return: ${formatMoney(totalCurrentValue - totalInvested)} ${currency} (${totalInvested > 0 ? (((totalCurrentValue - totalInvested) / totalInvested) * 100).toFixed(1) : '0'}%)\n\n`;
+    text += `Return: ${formatMoney(totalCurrentValue - totalInvested)} ${currency} (${totalInvested > 0 ? (((totalCurrentValue - totalInvested) / totalInvested) * 100).toFixed(1) : '0'}%)\n`;
+    if (realizedReturn !== 0) {
+      text += `Realized (from sales): ${formatMoney(realizedReturn)} ${currency}\n`;
+    }
+    text += `\n`;
 
     text += `By Category:\n`;
     Object.entries(investmentsByCategory).forEach(([cat, data]) => {
       const ret = data.current - data.invested;
       text += `- ${cat}: Invested ${formatMoney(data.invested)}, Current ${formatMoney(data.current)}, Return ${formatMoney(ret)} ${currency}\n`;
     });
+
+    const closedPositions = allPositions.filter(p => p.isClosed);
+    if (closedPositions.length > 0) {
+      text += `\nClosed Positions:\n`;
+      closedPositions.forEach(p => {
+        text += `- ${p.name}${p.ticker ? ` (${p.ticker})` : ''}: cost ${formatMoney(p.totalCostSold)}, sold ${formatMoney(p.totalProceeds)}, realized ${formatMoney(p.realizedReturn)} ${currency}\n`;
+      });
+    }
 
     text += `\nDetailed Positions:\n`;
     positions.forEach(p => {
@@ -176,7 +190,9 @@ export default function Settings() {
     });
 
     // Investment calculations using positions
-    const positions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+    const allPositions = groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+    const positions = getOpenPositions(allPositions);
+    const realizedReturn = allPositions.reduce((s, p) => s + p.realizedReturn, 0);
     const totalInvested = positions.reduce((s, p) => s + p.totalInvested, 0);
     const totalCurrentValue = positions.reduce((s, p) => s + (p.currentValue ?? p.totalInvested), 0);
     const investmentsByCategory: Record<string, { invested: number; current: number }> = {};
@@ -212,7 +228,7 @@ export default function Settings() {
     state.expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).forEach(e => {
       text += `- ${new Date(e.date).toLocaleDateString()}: ${e.category} - ${formatMoney(e.amount)} ${currency}${e.note ? ` (${e.note})` : ''}${e.accountType ? ` [${e.accountType}]` : ''}\n`;
     });
-    text += `\n## Investment Portfolio\nTotal Invested: ${formatMoney(totalInvested)} ${currency}\nCurrent Value: ${formatMoney(totalCurrentValue)} ${currency}\nReturn: ${formatMoney(totalCurrentValue - totalInvested)} ${currency} (${totalInvested > 0 ? (((totalCurrentValue - totalInvested) / totalInvested) * 100).toFixed(1) : '0'}%)\n\n`;
+    text += `\n## Investment Portfolio\nTotal Invested: ${formatMoney(totalInvested)} ${currency}\nCurrent Value: ${formatMoney(totalCurrentValue)} ${currency}\nReturn: ${formatMoney(totalCurrentValue - totalInvested)} ${currency} (${totalInvested > 0 ? (((totalCurrentValue - totalInvested) / totalInvested) * 100).toFixed(1) : '0'}%)${realizedReturn !== 0 ? `\nRealized (from sales): ${formatMoney(realizedReturn)} ${currency}` : ''}\n\n`;
     Object.entries(investmentsByCategory).forEach(([cat, data]) => {
       text += `- ${cat}: Invested ${formatMoney(data.invested)}, Current ${formatMoney(data.current)} ${currency}\n`;
     });

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAppState } from '../hooks/useAppState';
 import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Income } from '../types';
-import { groupLotsIntoPositions } from '../utils/investmentUtils';
+import { groupLotsIntoPositions, getOpenPositions } from '../utils/investmentUtils';
 
 const COLORS = [
   '#3B82F6', // blue
@@ -121,9 +121,12 @@ export default function Reports() {
       .sort((a, b) => b.value - a.value); // Sort by value in descending order
   }, [state.expenses, selectedMonth, selectedYear, monthlyExpenses]);
 
-  // Compute positions from lots
+  // Compute positions from lots — closed ones hold nothing, so they stay out
+  // of the allocation and value totals
   const positions = useMemo(() => {
-    return groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency);
+    return getOpenPositions(
+      groupLotsIntoPositions(state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency)
+    );
   }, [state.investments, state.priceCache, state.settings.usdToSarRate, state.settings.currency]);
 
   // Investment calculations
